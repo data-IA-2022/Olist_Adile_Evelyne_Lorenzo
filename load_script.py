@@ -55,19 +55,18 @@ path = r'C:\Users\loren\Desktop\MOOC\MOOC_G4_Maud_Lorenzo\Olist_Adile_Evelyne_Lo
 #     conn.commit()
 
 # Ajouter des clés primaires
-with conn.cursor() as cursor:
+# with conn.cursor() as cursor:
     
-    cursor.execute("ALTER TABLE olist_customers_dataset ADD CONSTRAINT pk_olist_customers_dataset PRIMARY KEY (customer_id);")
-    cursor.execute("ALTER TABLE olist_geolocation_dataset ADD CONSTRAINT pk_olist_geolocation_dataset PRIMARY KEY (geolocation_zip_code_prefix, geolocation_lat, geolocation_lng);")
-    cursor.execute("ALTER TABLE olist_order_items_dataset ADD CONSTRAINT pk_olist_order_items_dataset PRIMARY KEY (order_id, order_item_id);")
-    cursor.execute("ALTER TABLE olist_order_payments_dataset ADD CONSTRAINT pk_olist_order_payments_dataset PRIMARY KEY (order_id, payment_sequential);")
-    cursor.execute("ALTER TABLE olist_order_reviews_dataset ADD CONSTRAINT pk_olist_order_reviews_dataset PRIMARY KEY (review_id);")
-    cursor.execute("ALTER TABLE olist_orders_dataset ADD CONSTRAINT pk_olist_orders_dataset PRIMARY KEY (order_id);")
-    cursor.execute("ALTER TABLE olist_products_dataset ADD CONSTRAINT pk_olist_products_dataset PRIMARY KEY (product_id);")
-    cursor.execute("ALTER TABLE olist_sellers_dataset ADD CONSTRAINT pk_olist_sellers_dataset PRIMARY KEY (seller_id);")
-    cursor.execute("ALTER TABLE product_category_name_translation ADD CONSTRAINT pk_product_category_name_translation PRIMARY KEY (product_category_name);")
-    conn.commit()
-
+#     cursor.execute("ALTER TABLE olist_customers_dataset ADD CONSTRAINT pk_olist_customers_dataset PRIMARY KEY (customer_id);")
+#     cursor.execute("ALTER TABLE olist_geolocation_dataset ADD CONSTRAINT pk_olist_geolocation_dataset PRIMARY KEY (geolocation_zip_code_prefix, geolocation_lat, geolocation_lng);")
+#     cursor.execute("ALTER TABLE olist_order_items_dataset ADD CONSTRAINT pk_olist_order_items_dataset PRIMARY KEY (order_id, order_item_id);")
+#     cursor.execute("ALTER TABLE olist_order_payments_dataset ADD CONSTRAINT pk_olist_order_payments_dataset PRIMARY KEY (order_id, payment_sequential);")
+#     cursor.execute("ALTER TABLE olist_order_reviews_dataset ADD CONSTRAINT pk_olist_order_reviews_dataset PRIMARY KEY (review_id, order_id);")
+#     cursor.execute("ALTER TABLE olist_orders_dataset ADD CONSTRAINT pk_olist_orders_dataset PRIMARY KEY (order_id);")
+#     cursor.execute("ALTER TABLE olist_products_dataset ADD CONSTRAINT pk_olist_products_dataset PRIMARY KEY (product_id);")
+#     cursor.execute("ALTER TABLE olist_sellers_dataset ADD CONSTRAINT pk_olist_sellers_dataset PRIMARY KEY (seller_id);")
+#     cursor.execute("ALTER TABLE product_category_name_translation ADD CONSTRAINT pk_product_category_name_translation PRIMARY KEY (product_category_name);")
+#     conn.commit()
 
 # Ajouter des clés étrangères
 # with conn.cursor() as cursor:
@@ -75,8 +74,20 @@ with conn.cursor() as cursor:
 #     cursor.execute("""ALTER TABLE olist_customers_dataset ADD CONSTRAINT fk_customer_zip_code_prefix FOREIGN KEY (customer_zip_code_prefix) REFERENCES olist_geolocation_dataset(geolocation_zip_code_prefix, geolocation_lat, geolocation_lng);""")
 #     conn.commit()
 
-    
-#     # Ajouter des contraintes pour les colonnes de type VARCHAR
+# with conn.cursor() as cursor:
+#     cursor.execute("""ALTER TABLE olist_customers_dataset ADD CONSTRAINT fk_customer_zip_code_prefix FOREIGN KEY (customer_zip_code_prefix) REFERENCES olist_geolocation_dataset(geolocation_zip_code_prefix);""")
+#     cursor.execute("""ALTER TABLE olist_orders_dataset ADD CONSTRAINT fk_customer_id FOREIGN KEY (customer_id) REFERENCES olist_customers_dataset(customer_id);""")
+#     cursor.execute("""ALTER TABLE olist_orders_dataset ADD CONSTRAINT fk_order_items_order_id FOREIGN KEY (order_id) REFERENCES olist_order_items_dataset(order_id);""")
+#     cursor.execute("""ALTER TABLE olist_order_items_dataset ADD CONSTRAINT fk_order_items_product_id FOREIGN KEY (product_id) REFERENCES olist_products_dataset(product_id);""")
+#     cursor.execute("""ALTER TABLE olist_order_items_dataset ADD CONSTRAINT fk_order_items_seller_id FOREIGN KEY (seller_id) REFERENCES olist_sellers_dataset(seller_id);""")
+#     cursor.execute("""ALTER TABLE olist_order_payments_dataset ADD CONSTRAINT fk_payments_order_id FOREIGN KEY (order_id) REFERENCES olist_orders_dataset(order_id);""")
+#     cursor.execute("""ALTER TABLE olist_order_reviews_dataset ADD CONSTRAINT fk_reviews_order_id FOREIGN KEY (order_id) REFERENCES olist_orders_dataset(order_id);""")
+#     cursor.execute("""ALTER TABLE olist_order_reviews_dataset ADD CONSTRAINT fk_reviews_product_id FOREIGN KEY (product_id) REFERENCES olist_products_dataset(product_id);""")
+#     cursor.execute("""ALTER TABLE olist_sellers_dataset ADD CONSTRAINT fk_seller_zip_code_prefix FOREIGN KEY (seller_zip_code_prefix) REFERENCES olist_geolocation_dataset(geolocation_zip_code_prefix);""")
+#     conn.commit()
+
+# Ajouter des contraintes pour les colonnes de type VARCHAR
+# with conn.cursor() as cursor:
 #     cursor.execute("ALTER TABLE olist_customers_dataset ALTER COLUMN customer_city TYPE VARCHAR(50);")
 #     cursor.execute("ALTER TABLE olist_customers_dataset ALTER COLUMN customer_state TYPE VARCHAR(2);")
 #     cursor.execute("ALTER TABLE olist_geolocation_dataset ALTER COLUMN geolocation_city TYPE VARCHAR(50);")
