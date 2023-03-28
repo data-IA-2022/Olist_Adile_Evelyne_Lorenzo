@@ -54,11 +54,51 @@ path = r'C:\Users\loren\Desktop\MOOC\MOOC_G4_Maud_Lorenzo\Olist_Adile_Evelyne_Lo
 # );""")
 #     conn.commit()
 
+# with conn.cursor() as cursor:
+#     cursor.execute("""-- création de la table "customer_geolocation"
+# CREATE TABLE customer_geolocation (
+#     id SERIAL PRIMARY KEY,
+#     customer_id VARCHAR(255) NOT NULL,
+#     customer_zip_code_prefix INTEGER NOT NULL,
+#     geolocation_id INTEGER NOT NULL
+# );
+
+# """)
+#     conn.commit()
+
+# with conn.cursor() as cursor:
+#     cursor.execute("""
+# ALTER TABLE olist_geolocation_dataset
+# ADD COLUMN id SERIAL PRIMARY KEY;
+
+# """)
+#     conn.commit()
+    
+# with conn.cursor() as cursor:
+#     cursor.execute("""
+# ALTER TABLE customer_geolocation
+# ADD CONSTRAINT customer_fk FOREIGN KEY (customer_id) REFERENCES olist_customers_dataset(customer_id);
+
+# ALTER TABLE customer_geolocation
+# ADD CONSTRAINT geolocation_fk FOREIGN KEY (geolocation_id) REFERENCES olist_geolocation_dataset(id);
+
+# """)
+#     conn.commit()
+
+# with conn.cursor() as cursor:
+#     cursor.execute("""
+# INSERT INTO customer_geolocation (customer_id, customer_zip_code_prefix, geolocation_id)
+# SELECT c.customer_id, c.customer_zip_code_prefix, g.id
+# FROM olist_customers_dataset c
+# JOIN olist_geolocation_dataset g ON c.customer_zip_code_prefix = g.geolocation_zip_code_prefix;
+
+# """)
+#     conn.commit()
+
 # Ajouter des clés primaires
 # with conn.cursor() as cursor:
     
 #     cursor.execute("ALTER TABLE olist_customers_dataset ADD CONSTRAINT pk_olist_customers_dataset PRIMARY KEY (customer_id);")
-#     cursor.execute("ALTER TABLE olist_geolocation_dataset ADD CONSTRAINT pk_olist_geolocation_dataset PRIMARY KEY (geolocation_zip_code_prefix, geolocation_lat, geolocation_lng);")
 #     cursor.execute("ALTER TABLE olist_order_items_dataset ADD CONSTRAINT pk_olist_order_items_dataset PRIMARY KEY (order_id, order_item_id);")
 #     cursor.execute("ALTER TABLE olist_order_payments_dataset ADD CONSTRAINT pk_olist_order_payments_dataset PRIMARY KEY (order_id, payment_sequential);")
 #     cursor.execute("ALTER TABLE olist_order_reviews_dataset ADD CONSTRAINT pk_olist_order_reviews_dataset PRIMARY KEY (review_id, order_id);")
@@ -90,14 +130,22 @@ path = r'C:\Users\loren\Desktop\MOOC\MOOC_G4_Maud_Lorenzo\Olist_Adile_Evelyne_Lo
 # with conn.cursor() as cursor:
 #     cursor.execute("ALTER TABLE olist_customers_dataset ALTER COLUMN customer_city TYPE VARCHAR(50);")
 #     cursor.execute("ALTER TABLE olist_customers_dataset ALTER COLUMN customer_state TYPE VARCHAR(2);")
+#     cursor.execute("ALTER TABLE olist_customers_dataset ALTER COLUMN customer_zip_code_prefix TYPE VARCHAR(50);")
+#     cursor.execute("ALTER TABLE olist_customers_dataset ALTER COLUMN customer_id TYPE VARCHAR(100);")
+#     cursor.execute("ALTER TABLE olist_customers_dataset ALTER COLUMN customer_unique_id TYPE VARCHAR(100);")
+
+
 #     cursor.execute("ALTER TABLE olist_geolocation_dataset ALTER COLUMN geolocation_city TYPE VARCHAR(50);")
 #     cursor.execute("ALTER TABLE olist_geolocation_dataset ALTER COLUMN geolocation_state TYPE VARCHAR(2);")
+
 #     cursor.execute("ALTER TABLE olist_order_reviews_dataset ALTER COLUMN review_comment_title TYPE VARCHAR(100);")
 #     cursor.execute("ALTER TABLE olist_order_reviews_dataset ALTER COLUMN review_comment_message TYPE VARCHAR(500);")
+
 #     cursor.execute("ALTER TABLE olist_products_dataset ALTER COLUMN product_category_name TYPE VARCHAR(50);")
 #     cursor.execute("ALTER TABLE olist_products_dataset ALTER COLUMN product_name_lenght TYPE VARCHAR(50);")
 #     cursor.execute("ALTER TABLE olist_products_dataset ALTER COLUMN product_description_lenght TYPE VARCHAR(50);")
 #     cursor.execute("ALTER TABLE olist_products_dataset ALTER COLUMN product_photos_qty TYPE VARCHAR(50);")
+
 #     cursor.execute("ALTER TABLE olist_sellers_dataset ALTER COLUMN seller_city TYPE VARCHAR(50);")
 #     cursor.execute("ALTER TABLE olist_sellers_dataset ALTER COLUMN seller_state TYPE VARCHAR(2);")
     
