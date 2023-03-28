@@ -161,23 +161,52 @@ with conn.cursor() as cursor:
     conn.commit()
 
 with conn.cursor() as cursor:
+    cursor.execute("""
+        INSERT INTO public.olist_geolocation_dataset_bis (geolocation_zip_code_prefix, geolocation_lat, geolocation_lng, geolocation_city, geolocation_state, n)
+        SELECT DISTINCT S.customer_zip_code_prefix, NULL, NULL, NULL, NULL, 0
+        FROM olist_customers_dataset S
+        LEFT JOIN public.olist_geolocation_dataset_bis G
+        ON S.customer_zip_code_prefix = G.geolocation_zip_code_prefix
+        WHERE G.geolocation_zip_code_prefix IS NULL
+        ON CONFLICT (geolocation_zip_code_prefix) DO NOTHING;
+    """)
+    conn.commit()
+
+
+with conn.cursor() as cursor:
     cursor.execute("""INSERT INTO public.olist_geolocation_dataset_bis (geolocation_zip_code_prefix, geolocation_lat, geolocation_lng, geolocation_city, geolocation_state, n)
-                    SELECT DISTINCT S.customer_zip_code_prefix, NULL, NULL, NULL, NULL, 0
-                    FROM olist_customers_dataset S
+                    SELECT S.seller_zip_code_prefix, NULL, NULL, NULL, NULL, 0
+                    FROM olist_sellers_dataset S
                     LEFT JOIN public.olist_geolocation_dataset_bis G
-                    ON S.customer_zip_code_prefix = G.geolocation_zip_code_prefix
-                    WHERE G.geolocation_zip_code_prefix IS NULL;
+                    ON S.seller_zip_code_prefix = G.geolocation_zip_code_prefix
+                    WHERE G.geolocation_zip_code_prefix IS NULL
+                    ON CONFLICT (geolocation_zip_code_prefix) DO UPDATE
+                    SET geolocation_lat = EXCLUDED.geolocation_lat,
+                        geolocation_lng = EXCLUDED.geolocation_lng,
+                        geolocation_city = EXCLUDED.geolocation_city,
+                        geolocation_state = EXCLUDED.geolocation_state,
+                        n = EXCLUDED.n;
                     """)
     conn.commit()
 
+    
 ##################################################################################################
 # Ajout des clés étrangères
 ##################################################################################################
 
-# with conn.cursor() as cursor:
+with conn.cursor() as cursor:
     
-#     cursor.execute("""ALTER TABLE olist_customers_dataset ADD CONSTRAINT fk_customer_zip_code_prefix FOREIGN KEY (customer_zip_code_prefix) REFERENCES olist_geolocation_dataset(geolocation_zip_code_prefix, geolocation_lat, geolocation_lng);""")
-#     conn.commit()
+    cursor.execute("""ALTER TABLE public.olist_sellers_dataset ADD CONSTRAINT olist_sellers_dataset_fk FOREIGN KEY (seller_zip_code_prefix) REFERENCES public.olist_geolocation_dataset_bis(geolocation_zip_code_prefix);""")
+    cursor.execute("""ALTER TABLE public.olist_customers_dataset ADD CONSTRAINT olist_customers_dataset_fk FOREIGN KEY (customer_zip_code_prefix) REFERENCES public.olist_geolocation_dataset_bis(geolocation_zip_code_prefix);""")
+    cursor.execute("""ALTER TABLE public.olist_order_items_dataset ADD CONSTRAINT olist_order_items_dataset_fk FOREIGN KEY (seller_id) REFERENCES public.olist_sellers_dataset(seller_id);""")
+    cursor.execute("""ALTER TABLE public.olist_orders_dataset ADD CONSTRAINT olist_orders_dataset_fk FOREIGN KEY (customer_id) REFERENCES public.olist_customers_dataset(customer_id);""")
+    cursor.execute("""ALTER TABLE public.olist_order_items_dataset ADD CONSTRAINT olist_order_items_dataset_fk2 FOREIGN KEY (product_id) REFERENCES public.olist_products_dataset(product_id);""")
+    cursor.execute("""ALTER TABLE public.olist_order_payments_dataset ADD CONSTRAINT olist_order_payments_dataset_fk FOREIGN KEY (order_id) REFERENCES public.olist_orders_dataset(order_id);""")
+    cursor.execute("""ALTER TABLE public.olist_order_reviews_dataset ADD CONSTRAINT olist_order_reviews_dataset_fk FOREIGN KEY (order_id) REFERENCES public.olist_orders_dataset(order_id);""")
+    cursor.execute("""ALTER TABLE public.olist_order_items_dataset ADD CONSTRAINT olist_order_items_dataset_fk3 FOREIGN KEY (order_id) REFERENCES public.olist_orders_dataset(order_id);""")
+    # cursor.execute("""ALTER TABLE public.olist_products_dataset ADD CONSTRAINT olist_products_dataset_fk FOREIGN KEY (product_category_name) REFERENCES public.product_category_name_translation(product_category_name);""")
+    
+    conn.commit()
 
 # with conn.cursor() as cursor:
 #     cursor.execute("""ALTER TABLE olist_customers_dataset ADD CONSTRAINT fk_customer_zip_code_prefix FOREIGN KEY (customer_zip_code_prefix) REFERENCES olist_geolocation_dataset(geolocation_zip_code_prefix);""")

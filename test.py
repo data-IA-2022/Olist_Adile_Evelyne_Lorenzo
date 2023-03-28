@@ -12,7 +12,7 @@ conn = psycopg2.connect(
 cursor = conn.cursor()
 
 # Exemple : Exécuter une requête SQL pour afficher le contenu de la table "mytable"
-cursor.execute("SELECT * FROM test")
+cursor.execute("SELECT * FROM olist_customers_dataset")
 rows = cursor.fetchall()
 for row in rows:
     print(row)
