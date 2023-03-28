@@ -36,27 +36,27 @@ templates = Jinja2Templates(directory="templates")
 
 async def update_translations(conn):
     try:
-        print("Création de la colonne product_category_name_french...")  # Ajouter print
+        print("Création de la colonne product_category_name_french...")
         create_column_query = """ALTER TABLE product_category_name_translation
-                                 ADD COLUMN IF NOT EXISTS product_category_name_french TEXT;"""
+                                ADD COLUMN IF NOT EXISTS product_category_name_french TEXT;"""
         await conn.execute(create_column_query)
 
-        print("Récupération des noms de catégorie en anglais...")  # Ajouter print
-        select_query = """SELECT id, product_category_name_english
-                          FROM product_category_name_translation;"""
+        print("Récupération des noms de catégorie en anglais...")
+        select_query = """SELECT product_category_name, product_category_name_english
+                        FROM product_category_name_translation;"""
         rows = await conn.fetch(select_query)
 
-        print("Mise à jour des traductions en français...")  # Ajouter print
+        print("Mise à jour des traductions en français...")
         for row in rows:
             french_translation = translate_to_french(row['product_category_name_english'])
             update_query = """UPDATE product_category_name_translation
-                              SET product_category_name_french = $1
-                              WHERE id = $2;"""
-            await conn.execute(update_query, french_translation, row['id'])
+                            SET product_category_name_french = $1
+                            WHERE product_category_name = $2;"""
+            await conn.execute(update_query, french_translation, row['product_category_name'])
 
-        print("Mise à jour des traductions terminée.")  # Ajouter print
+        print("Mise à jour des traductions terminée.")
     except Exception as e:
-        print(f"Erreur lors de la mise à jour des traductions : {e}")  # Ajouter print
+        print(f"Erreur lors de la mise à jour des traductions : {e}")
 
 async def connect_to_db():
     try:
