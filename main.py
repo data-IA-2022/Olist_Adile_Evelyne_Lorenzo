@@ -27,9 +27,6 @@ app = FastAPI()
 # Configurer Jinja2
 templates = Jinja2Templates(directory="templates")
 
-# Paramètres de connexion à la base de données PostgreSQL
-# DATABASE_URL = "postgresql://postgres:greta2023@localhost:5432/olist_test"
-
 # Connexion à la base de données
 async def connect_to_db():
     config = load_config("config.yml")
