@@ -20,6 +20,6 @@ async def connect_to_db():
 
 @app.get("/", response_class=HTMLResponse)
 async def root(request: Request, conn = Depends(connect_to_db)):
-    query = "SELECT * FROM olist_customers_dataset"
+    query = "SELECT * FROM olist_customers_dataset LIMIT 15;"
     rows = await conn.fetch(query)
     return templates.TemplateResponse("index.html", {"request": request, "rows": rows})
