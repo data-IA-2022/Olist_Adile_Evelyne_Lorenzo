@@ -1,0 +1,11 @@
+ssh:
+  host: oslist.francecentral.cloudapp.azure.com
+  username: greta
+  password: greta@2023!!
+  local_bind_address: localhost
+  local_bind_port: 5432
+  remote_bind_address: 172.17.0.2
+  remote_bind_port: 5432
+
+postgres:
+  url: postgresql://postgres:greta2023@localhost:5432/olist_test
