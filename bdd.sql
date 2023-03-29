@@ -141,4 +141,36 @@ CREATE VIEW payments_orders_customers as
 (SELECT order_id, payment_value, A.customer_id, order_purchase_timestamp,
 customer_zip_code_prefix, customer_city, customer_state, region FROM payments_orders A INNER JOIN customers_brazil B ON (A.customer_id=B.customer_id));
 
+CREATE VIEW payments_orders_customers_items as
+(SELECT A.order_id, payment_value, customer_id, order_purchase_timestamp, customer_zip_code_prefix, customer_city, customer_state, region, product_id, seller_id, price 
+FROM payments_orders_customers A INNER JOIN olist_order_items B ON (A.order_id=B.order_id));
+
+CREATE VIEW order_infos AS
+(
+    SELECT
+        A.customer_id, 
+        order_purchase_timestamp, 
+        order_approved_at, 
+        order_delivered_carrier_date, 
+        order_delivered_customer_date, 
+        order_estimated_delivery_date, 
+        customer_zip_code_prefix,
+        C1.geolocation_lat AS customer_lat,
+        C1.geolocation_lng AS customer_lng,
+        D.seller_id,
+        E.seller_zip_code_prefix,
+        C2.geolocation_lat AS seller_lat,
+        C2.geolocation_lng AS seller_lng,
+        review_id,
+        review_creation_date
+    FROM olist_orders AS A 
+    INNER JOIN olist_order_items AS D ON A.order_id = D.order_id
+    INNER JOIN olist_order_reviews AS F ON A.order_id = F.order_id
+    INNER JOIN olist_sellers AS E ON D.seller_id = E.seller_id
+    INNER JOIN olist_customers AS B ON A.customer_id = B.customer_id
+    INNER JOIN olist_geolocation_bis AS C1 ON B.customer_zip_code_prefix = C1.geolocation_zip_code_prefix
+    INNER JOIN olist_geolocation_bis AS C2 ON E.seller_zip_code_prefix = C2.geolocation_zip_code_prefix);
+
+ALTER TABLE public.brazil_states ADD CONSTRAINT brazil_states_pk PRIMARY KEY (abbreviation);
+
 COMMIT;

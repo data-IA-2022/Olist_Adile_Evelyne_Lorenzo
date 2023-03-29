@@ -2,6 +2,10 @@ import os
 import pandas as pd
 from sqlalchemy import create_engine
 import psycopg2
+import time
+
+# Enregistrer l'heure de début
+start_time = time.time()
 
 # Créer une connexion à la base de données PostgreSQL
 conn = psycopg2.connect(
@@ -49,3 +53,12 @@ with open('bdd.sql', 'r') as file:
             if query.strip():  # Ignore les chaînes vides ou constituées uniquement d'espaces
                 cursor.execute(query)
                 conn.commit()
+
+# Enregistrer l'heure de fin
+end_time = time.time()
+
+# Calculer la différence entre les deux
+duration = end_time - start_time
+
+# Afficher le temps d'exécution en secondes
+print(f"Durée d'exécution : {duration} secondes")
