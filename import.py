@@ -7,52 +7,98 @@ import time
 # Enregistrer l'heure de début
 start_time = time.time()
 
-# Créer une connexion à la base de données PostgreSQL
-conn = psycopg2.connect(
-    host="localhost",
-    database="t",
-    user="postgres",
-    password="greta2023"
-)
+def insert_all_csv_to_postgresql():
 
-# Créer un moteur SQLAlchemy pour la connexion à la base de données PostgreSQL
-engine = create_engine('postgresql+psycopg2://', creator=lambda: conn, echo=False)
+    # Créer une connexion à la base de données PostgreSQL
+    conn = psycopg2.connect(
+        host="localhost",
+        database="t",
+        user="postgres",
+        password="greta2023"
+    )
 
-# Chemin d'accès au dossier contenant les fichiers CSV
-path = r'C:\Users\loren\Desktop\MOOC\MOOC_G4_Maud_Lorenzo\Olist_Adile_Evelyne_Lorenzo\archive'
+    # Créer un moteur SQLAlchemy pour la connexion à la base de données PostgreSQL
+    engine = create_engine('postgresql+psycopg2://', creator=lambda: conn, echo=False)
 
-# Parcourir tous les fichiers CSV dans le dossier et les insérer dans la base de données
-for filename in os.listdir(path):
-    if filename.endswith('.csv'):
-        # Charger le fichier CSV dans un dataframe pandas
-        # Spécifiez le type de données pour les colonnes customer_zip_code_prefix et geolocation_zip_code_prefix
-        dtype = None
-        if 'customers' in filename:
-            dtype = {'customer_zip_code_prefix': str}
-        elif 'geolocation' in filename:
-            dtype = {'geolocation_zip_code_prefix': str}
-        elif 'sellers' in filename:
-            dtype = {'seller_zip_code_prefix': str}
+    # Chemin d'accès au dossier contenant les fichiers CSV
+    path = r'C:\Users\loren\Desktop\MOOC\MOOC_G4_Maud_Lorenzo\Olist_Adile_Evelyne_Lorenzo\archive'
 
-        df = pd.read_csv(os.path.join(path, filename), dtype=dtype)
-        # Supprimer les espaces de début et de fin des noms de colonnes
-        df.columns = df.columns.str.strip()
-        # Enlever le mot "dataset" à la fin du nom de la table
-        table_name = filename[:-4].replace("_dataset", "")
-        # Insérer les données dans la base de données PostgreSQL
-        df.to_sql(table_name, engine, if_exists='replace', index=False)
+    # Parcourir tous les fichiers CSV dans le dossier et les insérer dans la base de données
+    for filename in os.listdir(path):
+        if filename.endswith('.csv'):
+            # Charger le fichier CSV dans un dataframe pandas
+            # Spécifiez le type de données pour les colonnes customer_zip_code_prefix et geolocation_zip_code_prefix
+            dtype = None
+            if 'customers' in filename:
+                dtype = {'customer_zip_code_prefix': str}
+            elif 'geolocation' in filename:
+                dtype = {'geolocation_zip_code_prefix': str}
+            elif 'sellers' in filename:
+                dtype = {'seller_zip_code_prefix': str}
 
-        # Exécuter les requêtes SQL pour effectuer les modifications nécessaires à la base de données
-with open('bdd.sql', 'r') as file:
-    queries = file.read()
+            df = pd.read_csv(os.path.join(path, filename), dtype=dtype)
+            # Supprimer les espaces de début et de fin des noms de colonnes
+            df.columns = df.columns.str.strip()
+            # Enlever le mot "dataset" à la fin du nom de la table
+            table_name = filename[:-4].replace("_dataset", "")
+            # Insérer les données dans la base de données PostgreSQL
+            df.to_sql(table_name, engine, if_exists='replace', index=False)
 
-    query_list = queries.split(';')
+    # Exécuter les requêtes SQL pour effectuer les modifications nécessaires à la base de données
+    with open('bdd.sql', 'r') as file:
+        queries = file.read()
 
-    with conn.cursor() as cursor:
-        for query in query_list:
-            if query.strip():  # Ignore les chaînes vides ou constituées uniquement d'espaces
-                cursor.execute(query)
-                conn.commit()
+        query_list = queries.split(';')
+
+        with conn.cursor() as cursor:
+            for query in query_list:
+                if query.strip():  # Ignore les chaînes vides ou constituées uniquement d'espaces
+                    cursor.execute(query)
+                    conn.commit()
+
+
+    
+def insert_csv_to_postgresql(filename):
+
+    # Créer une connexion à la base de données PostgreSQL
+    conn = psycopg2.connect(
+        host="localhost",
+        database="t",
+        user="postgres",
+        password="greta2023"
+    )
+
+    # Créer un moteur SQLAlchemy pour la connexion à la base de données PostgreSQL
+    engine = create_engine('postgresql+psycopg2://', creator=lambda: conn, echo=False)
+
+    # Chemin d'accès au dossier contenant les fichiers CSV
+    path = r'C:\Users\loren\Desktop\MOOC\MOOC_G4_Maud_Lorenzo\Olist_Adile_Evelyne_Lorenzo\archive'
+    
+    # Vérifier si le fichier spécifié existe dans le dossier
+    if filename not in os.listdir(path):
+        print(f"Le fichier '{filename}' n'existe pas dans le dossier.")
+        return
+
+    # Charger le fichier CSV dans un dataframe pandas
+    # Spécifiez le type de données pour les colonnes customer_zip_code_prefix et geolocation_zip_code_prefix
+    dtype = None
+    if 'customers' in filename:
+        dtype = {'customer_zip_code_prefix': str}
+    elif 'geolocation' in filename:
+        dtype = {'geolocation_zip_code_prefix': str}
+    elif 'sellers' in filename:
+        dtype = {'seller_zip_code_prefix': str}
+
+    df = pd.read_csv(os.path.join(path, filename), dtype=dtype)
+    # Supprimer les espaces de début et de fin des noms de colonnes
+    df.columns = df.columns.str.strip()
+    # Enlever le mot "dataset" à la fin du nom de la table
+    table_name = filename[:-4].replace("_dataset", "")
+    # Insérer les données dans la base de données PostgreSQL
+    df.to_sql(table_name, engine, if_exists='replace', index=False)
+
+# insert_all_csv_to_postgresql()
+insert_csv_to_postgresql('olist_geolocation_dataset.csv')
 
 # Enregistrer l'heure de fin
 end_time = time.time()

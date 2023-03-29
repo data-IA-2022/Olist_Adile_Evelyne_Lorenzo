@@ -171,6 +171,9 @@ CREATE VIEW order_infos AS
     INNER JOIN olist_geolocation_bis AS C1 ON B.customer_zip_code_prefix = C1.geolocation_zip_code_prefix
     INNER JOIN olist_geolocation_bis AS C2 ON E.seller_zip_code_prefix = C2.geolocation_zip_code_prefix);
 
+CREATE VIEW payments_orders_customers_items_products as
+(SELECT order_id, customer_id, order_purchase_timestamp, payment_value, price, product_category_name, A.product_id, region, customer_state, customer_city, customer_zip_code_prefix, seller_id FROM payments_orders_customers_items A INNER JOIN olist_products B ON (A.product_id=B.product_id));
+
 ALTER TABLE public.brazil_states ADD CONSTRAINT brazil_states_pk PRIMARY KEY (abbreviation);
 
 COMMIT;
