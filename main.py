@@ -69,9 +69,9 @@ async def connect_to_db():
         print("Connexion à la base de données...")
         conn = await asyncpg.connect(config["postgres"]["url"])
         print("Mise à jour des traductions...")
-        await update_translations(conn)
+        # await update_translations(conn)
         print("Mise à jour des coordonnées de géopoint...")
-        await update_geolocation(conn)  # Ajouter cet appel
+        # await update_geolocation(conn)  # Ajouter cet appel
         return conn
     except Exception as e:
         print(f"Erreur lors de la connexion à la base de données : {e}")
@@ -80,13 +80,13 @@ async def connect_to_db():
 async def update_geolocation(conn):
     try:
         print("Création de la colonne geopoint_location...")
-        create_column_query = """ALTER TABLE olist_geolocation_dataset_bis
+        create_column_query = """ALTER TABLE olist_geolocation_bis
                                     ADD COLUMN IF NOT EXISTS geopoint_location POINT;"""
         await conn.execute(create_column_query)
 
         print("Récupération des latitudes et longitudes...")
         select_query = """SELECT geolocation_lat, geolocation_lng
-                        FROM olist_geolocation_dataset_bis;"""
+                        FROM olist_geolocation_bis;"""
         rows = await conn.fetch(select_query)
 
         print("Mise à jour des coordonnées de géopoint...")
@@ -94,7 +94,7 @@ async def update_geolocation(conn):
             latitude = row['geolocation_lat']
             longitude = row['geolocation_lng']
             if latitude and longitude:
-                update_query = """UPDATE olist_geolocation_dataset_bis
+                update_query = """UPDATE olist_geolocation_bis
                                 SET geopoint_location = POINT($1, $2)
                                 WHERE geolocation_lat = $3
                                 AND geolocation_lng = $4;"""
@@ -106,6 +106,6 @@ async def update_geolocation(conn):
 
 @app.get("/", response_class=HTMLResponse)
 async def root(request: Request, conn = Depends(connect_to_db)):
-    query = "SELECT * FROM olist_customers_dataset LIMIT 15;"
+    query = "SELECT * FROM olist_customers LIMIT 15;"
     rows = await conn.fetch(query)
     return templates.TemplateResponse("index.html", {"request": request, "rows": rows})
