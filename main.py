@@ -1,4 +1,5 @@
 import asyncpg
+import folium
 from fastapi import FastAPI, Request, Depends
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -8,6 +9,17 @@ import yaml
 from sshtunnel import SSHTunnelForwarder
 from googletrans import Translator
 from psycopg2.extras import execute_values
+import pandas as pd
+import numpy as np
+from bokeh.plotting import figure, show
+from bokeh.tile_providers import get_provider, WIKIMEDIA, CARTODBPOSITRON, STAMEN_TERRAIN, STAMEN_TONER, ESRI_IMAGERY, OSM
+from bokeh.models import ColumnDataSource, HoverTool
+from bokeh.embed import file_html
+from bokeh.resources import CDN
+from pyproj import Proj, transform
+from bokeh.models.ranges import Range1d
+from bokeh.models.tiles import WMTSTileSource
+
 
 def load_config(file_path):
     with open(file_path, "r") as file:
@@ -109,3 +121,49 @@ async def root(request: Request, conn = Depends(connect_to_db)):
     query = "SELECT * FROM olist_customers LIMIT 15;"
     rows = await conn.fetch(query)
     return templates.TemplateResponse("index.html", {"request": request, "rows": rows})
+
+def lat_lng_to_mercator(lat, lng):
+    in_proj = Proj(proj='latlong', datum='WGS84')
+    out_proj = Proj(proj='merc', datum='WGS84')
+    mercator_x, mercator_y = transform(in_proj, out_proj, lng, lat)
+    return mercator_x, mercator_y
+
+dark_gray_base_url = "http://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{Z}/{Y}/{X}.png"
+dark_gray_base = WMTSTileSource(url=dark_gray_base_url)
+
+
+@app.get("/plot_map", response_class=HTMLResponse)
+async def plot_map(request: Request, conn=Depends(connect_to_db)):
+    # Get data from the database
+    query = "SELECT geolocation_zip_code_prefix, geolocation_lat, geolocation_lng FROM olist_geolocation_bis LIMIT 1000;"
+    rows = await conn.fetch(query)
+
+    # Convert rows to a pandas DataFrame
+    df = pd.DataFrame(rows, columns=['zip_code', 'lat', 'lng'])
+    
+        # Convert lat, lng to Mercator coordinates
+    df['mercator_x'], df['mercator_y'] = zip(*df.apply(lambda row: lat_lng_to_mercator(row['lat'], row['lng']), axis=1))
+
+    # Define the tile provider for the map
+    # tile_provider = get_provider(STAMEN_TERRAIN)
+
+    # Create a new Bokeh plot with the tile provider
+    p = figure(x_axis_type="mercator", y_axis_type="mercator")
+    p.add_tile(dark_gray_base)
+
+
+    # Add markers for each point with zip code information
+    source = ColumnDataSource(df)
+    hover_tool = HoverTool(tooltips=[("Zip code", "@zip_code")])
+    p.add_tools(hover_tool)
+    p.circle(x='mercator_x', y='mercator_y', size=5, color='red', source=source)
+
+    # Get the HTML representation of the plot
+    plot_html = file_html(p, CDN, "my plot")
+
+    return templates.TemplateResponse("plot_map.html", {"request": request, "plot_html": plot_html})
+
+
+
+
+
