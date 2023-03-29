@@ -1,0 +1,28 @@
+abbreviation,state ,capitol_city ,region ,size_km2,population_2007,perc_pop_urb,municipal_districts,per_capita_gnp,life_expectancy
+AC,Acre,Rio Branco,North,152581,664000,69.6,24,5413,71.1
+AL,Alagoas,Maceió,Northeast,27767,3557000,67.4,102,3876,65.4
+AP,Amapá,Macapá,North,142814,619000,93.7,16,6796,70.1
+AM,Amazonas,Manaus,North,1570745,3351000,77.6,62,11434,71.3
+BA,Bahia,Salvador,Northeast,564692,13974000,67.4,417,6350,71.7
+CE,Ceará,Fortaleza,Northeast,148825,8238000,76.4,184,4169,69.9
+DF,Distrito Federal,Brasília,Center West,5801,2393000,94.0,1,19071,75.1
+ES,Espírito Santo,Vitória,Southeast,46077,3474000,82.2,78,10288,73.4
+GO,Goiás,Goiânia,Center West,340086,5750000,88.6,246,7500,73.1
+MA,Maranhão,São Luís,Northeast,331983,6199000,67.0,217,2748,67.2
+MT,MatoGrosso,Cuiabá,Center West,903357,2866000,76.6,141,10161,72.9
+MS,MatoGrosso do Sul,Campo Grande,Center West,357124,2304000,84.7,78,8944,73.5
+MG,Minas Gerais,Belo Horizonte,Southeast,586528,19522000,84.7,853,8770,74.4
+PA,Pará,Belém,North,1247689,7136000,75.2,143,4991,71.7
+PB,Paraíba,João Pessoa,Northeast,5644,3595886,75.8,223,3872,67.9
+PR,Paraná,Curitiba,South,199315,10261856,83.6,399,9891,73.2
+PE,Pernambuco,Recife,Northeast,98311,8518000,76.8,185,5730,67.9
+PI,Piauí,Teresina,Northeast,251529,3041000,60.7,223,2892,68.8
+RJ,Rio de Janeiro,Rio de Janeiro,Southeast,43696,15593000,96.9,92,14638,72.8
+RN,Rio Grande do Norte,Natal,Northeast,52796,3051000,72.4,167,5369,70.1
+RS,Rio Grande do Sul,Porto Alegre,South,281748,10984000,81.0,496,13320,74.8
+RO,Rondônia,Porto Velho,North,237576,1567000,68.2,52,6238,70.9
+RR,Roraima,Boa Vista,North,224298,405000,81.6,15,4881,69.6
+SC,Santa Catarina,Florianópolis,South,95346,5974000,82.5,293,12158,75.0
+SP,São Paulo,São Paulo,Southeast,248209,41164000,94.5,645,13725,73.9
+SE,Sergipe,Aracajú,Northeast,2191,2007000,82.2,75,6782,70.6
+TO,Tocantins,Palmas,North,27762,1337000,74.1,139,3776,71.0

@@ -7,6 +7,7 @@ import os
 import yaml
 from sshtunnel import SSHTunnelForwarder
 from googletrans import Translator
+from psycopg2.extras import execute_values
 
 def load_config(file_path):
     with open(file_path, "r") as file:
@@ -57,21 +58,51 @@ async def update_translations(conn):
         print("Mise à jour des traductions terminée.")
     except Exception as e:
         print(f"Erreur lors de la mise à jour des traductions : {e}")
-
+        
 async def connect_to_db():
     try:
-        print("Chargement de la configuration...")  # Ajouter print
+        print("Chargement de la configuration...")
         config = load_config("config.yml")
         ssh_tunnel = create_ssh_tunnel(config)
-        print("Démarrage du tunnel SSH...")  # Ajouter print
+        print("Démarrage du tunnel SSH...")
         ssh_tunnel.start()
-        print("Connexion à la base de données...")  # Ajouter print
+        print("Connexion à la base de données...")
         conn = await asyncpg.connect(config["postgres"]["url"])
-        print("Mise à jour des traductions...")  # Ajouter print
+        print("Mise à jour des traductions...")
         await update_translations(conn)
+        print("Mise à jour des coordonnées de géopoint...")
+        await update_geolocation(conn)  # Ajouter cet appel
         return conn
     except Exception as e:
-        print(f"Erreur lors de la connexion à la base de données : {e}")  # Ajouter print
+        print(f"Erreur lors de la connexion à la base de données : {e}")
+
+        
+async def update_geolocation(conn):
+    try:
+        print("Création de la colonne geopoint_location...")
+        create_column_query = """ALTER TABLE olist_geolocation_dataset_bis
+                                    ADD COLUMN IF NOT EXISTS geopoint_location POINT;"""
+        await conn.execute(create_column_query)
+
+        print("Récupération des latitudes et longitudes...")
+        select_query = """SELECT geolocation_lat, geolocation_lng
+                        FROM olist_geolocation_dataset_bis;"""
+        rows = await conn.fetch(select_query)
+
+        print("Mise à jour des coordonnées de géopoint...")
+        for row in rows:
+            latitude = row['geolocation_lat']
+            longitude = row['geolocation_lng']
+            if latitude and longitude:
+                update_query = """UPDATE olist_geolocation_dataset_bis
+                                SET geopoint_location = POINT($1, $2)
+                                WHERE geolocation_lat = $3
+                                AND geolocation_lng = $4;"""
+                await conn.execute(update_query, longitude, latitude, latitude, longitude)
+
+        print("La colonne geopoint_location a été ajoutée avec succès.")
+    except Exception as e:
+        print(f"Erreur lors de la mise à jour des coordonnées de géopoint : {e}")
 
 @app.get("/", response_class=HTMLResponse)
 async def root(request: Request, conn = Depends(connect_to_db)):
