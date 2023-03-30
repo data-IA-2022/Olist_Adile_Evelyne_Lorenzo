@@ -97,8 +97,8 @@ def insert_csv_to_postgresql(filename):
     # Insérer les données dans la base de données PostgreSQL
     df.to_sql(table_name, engine, if_exists='replace', index=False)
 
-# insert_all_csv_to_postgresql()
-insert_csv_to_postgresql('olist_geolocation_dataset.csv')
+insert_all_csv_to_postgresql()
+# insert_csv_to_postgresql('olist_geolocation_dataset.csv')
 
 # Enregistrer l'heure de fin
 end_time = time.time()

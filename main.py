@@ -42,6 +42,17 @@ def translate_to_french(text: str) -> str:
     translated = translator.translate(text, dest='fr')
     return translated.text
 
+def translate_to_english(text: str) -> str:
+    translator = Translator()
+    translated = translator.translate(text, src='fr', dest='en')
+    return translated.text
+
+def translate_to_pt_and_en(text: str) -> tuple:
+    translator = Translator()
+    translation_pt = translator.translate(text, dest='pt')
+    translation_en = translator.translate(text, dest='en')
+    return (translation_pt.text, translation_en.text)
+
 app = FastAPI()
 
 # Configurer Jinja2
@@ -194,12 +205,15 @@ async def seller_zip_codes(request: Request, conn=Depends(connect_to_db)):
     return templates.TemplateResponse("seller_zip_codes.html", {"request": request, "plot_html": plot_html})
 
 @app.post("/add_category")
-async def add_category(request: Request, product_category_name: str = Form(...), product_category_name_english: str = Form(...), product_category_name_french: str = Form(...), conn=Depends(connect_to_db)):
+async def add_category(request: Request, product_category_name_french: str = Form(...), conn=Depends(connect_to_db)):
     try:
-       # Insérer la nouvelle catégorie sans spécifier l'ID
+        # Traduction en portugais brésilien et anglais
+        translation_pt, translation_en = translate_to_pt_and_en(product_category_name_french)
+
+        # Insérer la nouvelle catégorie
         insert_query = """INSERT INTO product_category_name_translation (product_category_name, product_category_name_english, product_category_name_french)
-                    VALUES ($1, $2, $3);"""
-        await conn.execute(insert_query, product_category_name, product_category_name_english, product_category_name_french)
+                            VALUES ($1, $2, $3);"""
+        await conn.execute(insert_query, translation_pt, translation_en, product_category_name_french)
 
         return {"message": "Catégorie ajoutée avec succès"}
     except Exception as e:
@@ -209,5 +223,7 @@ async def add_category(request: Request, product_category_name: str = Form(...),
 @app.get("/translation", response_class=HTMLResponse)
 async def get_translations(request: Request, conn=Depends(connect_to_db)):
     query = "SELECT * FROM product_category_name_translation ORDER BY id DESC;"
+
     cats = await conn.fetch(query)
     return templates.TemplateResponse("translation.html", {"request": request, "rows": cats})
+
