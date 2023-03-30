@@ -128,12 +128,10 @@ def lat_lng_to_mercator(lat, lng):
     mercator_x, mercator_y = transform(in_proj, out_proj, lng, lat)
     return mercator_x, mercator_y
 
-dark_gray_base_url = "http://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{Z}/{Y}/{X}.png"
-dark_gray_base = WMTSTileSource(url=dark_gray_base_url)
-
-
 @app.get("/plot_map", response_class=HTMLResponse)
 async def plot_map(request: Request, conn=Depends(connect_to_db)):
+    dark_gray_base_url = "http://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{Z}/{Y}/{X}.png"
+    dark_gray_base = WMTSTileSource(url=dark_gray_base_url)
     # Get data from the database
     query = "SELECT geolocation_zip_code_prefix, geolocation_lat, geolocation_lng FROM olist_geolocation_bis LIMIT 1000;"
     rows = await conn.fetch(query)
