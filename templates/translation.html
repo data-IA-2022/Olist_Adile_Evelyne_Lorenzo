@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+            <html lang="fr">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Exemple FastAPI avec Jinja2</title>
+            </head>
+            <body>
+                           <!-- Ajoutez ce formulaire pour soumettre les données de la nouvelle catégorie -->
+            <form action="/add_category" method="post">
+                <label for="product_category_name">Nom de catégorie :</label>
+                <input type="text" id="product_category_name" name="product_category_name" required>
+                <label for="product_category_name_english">Nom de catégorie en anglais :</label>
+                <input type="text" id="product_category_name_english" name="product_category_name_english" required>
+          
+                <label for="product_category_name_french">Nom de catégorie en anglais :</label>
+                <input type="text" id="product_category_name_french" name="product_category_name_french" required>
+                <button type="submit">Ajouter une catégorie</button>
+            </form>
+        
+        
+        
+            <h1>Liste des catégories</h1>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nom de catégorie</th>
+                        <th>Nom de catégorie (anglais)</th>
+                        <th>Nom de catégorie (français)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in rows %}
+                        <tr>
+                            <td>{{ row['product_category_name'] }}</td>
+                            <td>{{ row['product_category_name_english'] }}</td>
+                            <td>{{ row['product_category_name_french'] }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            </body>
+            </html>

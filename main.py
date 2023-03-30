@@ -1,6 +1,6 @@
 import asyncpg
 import folium
-from fastapi import FastAPI, Request, Depends
+from fastapi import FastAPI, Request, Depends, Form
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -80,9 +80,9 @@ async def connect_to_db():
         ssh_tunnel.start()
         print("Connexion à la base de données...")
         conn = await asyncpg.connect(config["postgres"]["url"])
-        print("Mise à jour des traductions...")
+        # print("Mise à jour des traductions...")
         # await update_translations(conn)
-        print("Mise à jour des coordonnées de géopoint...")
+        # print("Mise à jour des coordonnées de géopoint...")
         # await update_geolocation(conn)  # Ajouter cet appel
         return conn
     except Exception as e:
@@ -193,3 +193,21 @@ async def seller_zip_codes(request: Request, conn=Depends(connect_to_db)):
 
     return templates.TemplateResponse("seller_zip_codes.html", {"request": request, "plot_html": plot_html})
 
+@app.post("/add_category")
+async def add_category(request: Request, product_category_name: str = Form(...), product_category_name_english: str = Form(...), product_category_name_french: str = Form(...), conn=Depends(connect_to_db)):
+    try:
+       # Insérer la nouvelle catégorie sans spécifier l'ID
+        insert_query = """INSERT INTO product_category_name_translation (product_category_name, product_category_name_english, product_category_name_french)
+                    VALUES ($1, $2, $3);"""
+        await conn.execute(insert_query, product_category_name, product_category_name_english, product_category_name_french)
+
+        return {"message": "Catégorie ajoutée avec succès"}
+    except Exception as e:
+        print(f"Erreur lors de l'ajout de la catégorie : {e}")
+        return {"message": f"Erreur lors de l'ajout de la catégorie : {e}"}
+    
+@app.get("/translation", response_class=HTMLResponse)
+async def get_translations(request: Request, conn=Depends(connect_to_db)):
+    query = "SELECT * FROM product_category_name_translation ORDER BY id DESC;"
+    cats = await conn.fetch(query)
+    return templates.TemplateResponse("translation.html", {"request": request, "rows": cats})
