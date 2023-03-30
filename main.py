@@ -146,9 +146,8 @@ async def plot_map(request: Request, conn=Depends(connect_to_db)):
     # tile_provider = get_provider(STAMEN_TERRAIN)
 
     # Create a new Bokeh plot with the tile provider
-    p = figure(x_axis_type="mercator", y_axis_type="mercator")
+    p = figure(x_axis_type="mercator", y_axis_type="mercator", plot_width=1000, plot_height=1000)
     p.add_tile(dark_gray_base)
-
 
     # Add markers for each point with zip code information
     source = ColumnDataSource(df)
@@ -160,8 +159,37 @@ async def plot_map(request: Request, conn=Depends(connect_to_db)):
     plot_html = file_html(p, CDN, "my plot")
 
     return templates.TemplateResponse("plot_map.html", {"request": request, "plot_html": plot_html})
+@app.get("/seller", response_class=HTMLResponse)
+async def seller_zip_codes(request: Request, conn=Depends(connect_to_db)):
+    dark_gray_base_url = "http://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{Z}/{Y}/{X}.png"
+    dark_gray_base = WMTSTileSource(url=dark_gray_base_url)
 
+    # Get data from the database
+    query = """
+    SELECT DISTINCT s.seller_zip_code_prefix, g.geolocation_lat, g.geolocation_lng
+    FROM olist_sellers s
+    JOIN olist_geolocation_bis g ON s.seller_zip_code_prefix = g.geolocation_zip_code_prefix;
+    """
+    rows = await conn.fetch(query)
 
+    # Convert rows to a pandas DataFrame
+    df = pd.DataFrame(rows, columns=['zip_code', 'lat', 'lng'])
 
+    # Convert lat, lng to Mercator coordinates
+    df['mercator_x'], df['mercator_y'] = zip(*df.apply(lambda row: lat_lng_to_mercator(row['lat'], row['lng']), axis=1))
 
+    # Define the tile provider for the map
+    p = figure(x_axis_type="mercator", y_axis_type="mercator", plot_width=1000, plot_height=1000)
+    p.add_tile(dark_gray_base)
+
+    # Add markers for each point with zip code information
+    source = ColumnDataSource(df)
+    hover_tool = HoverTool(tooltips=[("Zip code", "@zip_code")])
+    p.add_tools(hover_tool)
+    p.circle(x='mercator_x', y='mercator_y', size=8, color='blue', source=source)
+
+    # Get the HTML representation of the plot
+    plot_html = file_html(p, CDN, "my plot")
+
+    return templates.TemplateResponse("seller_zip_codes.html", {"request": request, "plot_html": plot_html})
 
