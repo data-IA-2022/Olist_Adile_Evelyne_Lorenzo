@@ -5,19 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Exemple FastAPI avec Jinja2</title>
     <script src="https://unpkg.com/htmx.org/dist/htmx.min.js%22%3E"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-    <form action ="/add_category" method="post" onsubmit="handleSubmit(event)">
+<body class='bg-dark'>
+    <form class='block max-w-sm rounded-lg bg-white p-6 shadow-lg dark:bg-neutral-700' action ="/add_category" method="post" onsubmit="handleSubmit(event)">
         <label for="product_category_name_french">Nom de catégorie en français:</label>
         <input type="text" id="product_category_name_french" name="product_category_name_french" required>
         <button type="submit">Ajouter une catégorie</button>
     </form>
 
     <h1>Liste des catégories</h1>
-    <table>
-        <thead>
-            <tr>
-                <th>ID</th>
+    <div class='flex justify-center content-center '>
+    <table class='bg-slate-600 text-white text-center rounded'>
+        <thead class='bg-slate-800 text-white '>
+            <tr class='border border-solid border-1 '>
+                <th class='p-4 ' >ID</th>
                 <th>Nom de catégorie</th>
                 <th>Nom de catégorie (anglais)</th>
                 <th>Nom de catégorie (français)</th>
@@ -25,7 +27,7 @@
         </thead>
         <tbody id="categories-table">
             {% for row in rows %}
-                <tr>
+                <tr class='border border-solid border-1 hover:bg-white hover:text-black'>
                     <td>{{ row.id }}</td>
                     <td>{{ row.product_category_name }}</td>
                     <td>{{ row.product_category_name_english }}</td>
@@ -34,6 +36,7 @@
             {% endfor %}
         </tbody>
     </table>
+    </div>
     
 </body>
 <script>

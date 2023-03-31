@@ -58,6 +58,10 @@ app = FastAPI()
 # Configurer Jinja2
 templates = Jinja2Templates(directory="templates")
 
+config = load_config("config.yml")
+ssh_tunnel = create_ssh_tunnel(config)
+ssh_tunnel.start()
+
 async def update_translations(conn):
     try:
         print("Création de la colonne product_category_name_french...")
@@ -85,10 +89,7 @@ async def update_translations(conn):
 async def connect_to_db():
     try:
         print("Chargement de la configuration...")
-        config = load_config("config.yml")
-        ssh_tunnel = create_ssh_tunnel(config)
         print("Démarrage du tunnel SSH...")
-        ssh_tunnel.start()
         print("Connexion à la base de données...")
         conn = await asyncpg.connect(config["postgres"]["url"])
         # print("Mise à jour des traductions...")
@@ -170,6 +171,7 @@ async def plot_map(request: Request, conn=Depends(connect_to_db)):
     plot_html = file_html(p, CDN, "my plot")
 
     return templates.TemplateResponse("plot_map.html", {"request": request, "plot_html": plot_html})
+
 @app.get("/seller", response_class=HTMLResponse)
 async def seller_zip_codes(request: Request, conn=Depends(connect_to_db)):
     dark_gray_base_url = "http://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{Z}/{Y}/{X}.png"
