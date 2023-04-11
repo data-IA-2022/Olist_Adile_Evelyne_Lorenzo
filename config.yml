@@ -9,3 +9,6 @@ ssh:
 
 postgres:
   url: postgresql://postgres:greta2023@localhost:5432/test
+
+postgres_writer:
+  url: postgresql://writer:greta2023@localhost:5432/test
