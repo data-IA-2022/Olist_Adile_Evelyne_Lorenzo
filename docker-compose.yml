@@ -1,0 +1,10 @@
+version: "3.8"
+
+services:
+  app:
+    build: .
+    ports:
+      - "5555:80"
+      - "5432:5432"
+    environment:
+      OLIST: "postgresql://writer:greta2023@localhost:5432/test"
