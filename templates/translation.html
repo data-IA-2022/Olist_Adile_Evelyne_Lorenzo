@@ -8,8 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class='bg-dark'>
-    <form class='rounded-lg bg-white p-6 shadow-lg dark:bg-neutral-700' action ="/add_category" method="post" onsubmit="handleSubmit(event)">
-        <label for="product_category_name_french">Nom de catégorie en français:</label>
+    <form class='rounded-lg bg-white p-6 shadow-lg dark:bg-neutral-700' action ="/add_category" method="post" onsubmit="handleSubmit(event)">        <label for="product_category_name_french">Nom de catégorie en français:</label>
         <input type="text" id="product_category_name_french" name="product_category_name_french" required>
         <button type="submit">Ajouter une catégorie</button>
     </form>
@@ -41,28 +40,28 @@
 </body>
 <script>
     function handleSubmit(event) {
-        event.preventDefault(); // empêcher le formulaire de se soumettre normalement
-        const formData = new FormData(event.target); // récupérer les données du formulaire
-
-        fetch('/add_category', { // envoyer les données à la route "/add_category" en utilisant fetch
-            method: 'POST',
-            body: formData
+        event.preventDefault();
+        const formData = new FormData(event.target);
+      
+        fetch('/add_category', {
+          method: 'POST',
+          body: formData
         })
-        .then(response => response.json()) // récupérer la réponse JSON
+        .then(response => response.json())
         .then(data => {
-            console.log(data); // afficher la réponse dans la console
-            // mettre à jour la partie du contenu de la page qui affiche les catégories
-            const tableBody = document.querySelector('#categories-table tbody');
-            const newRow = document.createElement('tr');
-            newRow.innerHTML = 
-                <td>${data.id}</td>
-                <td>${formData.get('product_category_name_french')}</td>
-                <td>${data.product_category_name_english}</td>
-                <td>${data.product_category_name_french}</td>
-            ;
-            tableBody.appendChild(newRow);
+          console.log(data);
+          const tableBody = document.querySelector('#categories-table tbody');
+          const newRow = document.createElement('tr');
+          newRow.innerHTML = 
+              `<td>${data.id}</td>
+              <td>${formData.get('product_category_name_french')}</td>
+              <td>${data.product_category_name_english}</td>
+              <td>${data.product_category_name_french}</td>`;
+          tableBody.appendChild(newRow);
+      
+          window.location.reload();
         })
-        .catch(error => console.error(error)); // gérer les erreurs
-    }
+        .catch(error => console.error(error));
+      }
 </script>
 </html>
