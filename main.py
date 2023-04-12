@@ -237,7 +237,7 @@ async def root(request: Request, conn=Depends(connect_to_db)):
 
 
 @app.post("/add_category")
-async def add_category(request: Request, product_name: schemas.Product_name, product_category_name_french: str = Form(...), db: Session = Depends(get_db)):
+async def add_category(request: Request, product_category_name_french: str = Form(...), db: Session = Depends(get_db)):
     try:
         # Traduction en portugais brésilien et anglais
         translation_pt, translation_en = translate_to_pt_and_en(
@@ -245,7 +245,6 @@ async def add_category(request: Request, product_name: schemas.Product_name, pro
 
         # Insérer la nouvelle catégorie
         new_category = models.ProductCategory(
-            product_name=product_name,
             product_category_name=translation_pt,
             product_category_name_english=translation_en,
             product_category_name_french=product_category_name_french

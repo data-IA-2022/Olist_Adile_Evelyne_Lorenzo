@@ -13,10 +13,10 @@ def load_config(file_path):
 
 
 config = load_config("config.yml")
-SQLALCHEMY_DATABASE_URL = config["postgres_writer"]["url"]
+SQLALCHEMY_DATABASE_URL = config["postgres"]["url"]
 
-engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={
-                       "check_same_thread": False})
+engine = create_engine(SQLALCHEMY_DATABASE_URL)
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
