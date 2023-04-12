@@ -7,4 +7,4 @@ services:
       - "5555:5000"
       - "5432:5432"
     environment:
-      OLIST: "postgresql://writer:greta2023@localhost:5432/test"
+      OLIST: "postgresql://postgres:greta2023@localhost:5432/test"
