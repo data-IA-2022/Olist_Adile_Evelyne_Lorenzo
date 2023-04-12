@@ -10,7 +10,7 @@ COPY . /app
 RUN pip install -r requirements.txt
 
 # Définition des variables d'environnement
-ENV OLIST=postgresql://writer:greta2023@localhost:5432/test
+ENV OLIST=postgresql://postgres:greta2023@localhost:5432/test
 
 # Exposition du port de l'application
 EXPOSE 5000
