@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 
 import models
 import schemas
+from database import get_db
 
 
 # from bokeh.plotting import figure, show
@@ -234,30 +235,29 @@ async def root(request: Request, conn=Depends(connect_to_db)):
 
 #     return templates.TemplateResponse("seller_zip_codes.html", {"request": request, "plot_html": plot_html})
 
+
 @app.post("/add_category")
-async def add_category(request: Request, product_name: schemas.Product_name, product_category_name_french: str = Form(...), conn=Depends(connect_to_db)):
+async def add_category(request: Request, product_name: schemas.Product_name, product_category_name_french: str = Form(...), db: Session = Depends(get_db)):
     try:
         # Traduction en portugais brésilien et anglais
         translation_pt, translation_en = translate_to_pt_and_en(
             product_category_name_french)
 
         # Insérer la nouvelle catégorie
-        # insert_query = """INSERT INTO product_category_name_translation (product_category_name, product_category_name_english, product_category_name_french)
-        #                     VALUES ($1, $2, $3);"""
         new_category = models.ProductCategory(
+            product_name=product_name,
             product_category_name=translation_pt,
             product_category_name_english=translation_en,
             product_category_name_french=product_category_name_french
         )
-        # Ajouter la nouvelle catégorie à la session
-        conn.add(new_category)
-        # Effectuer la transaction
-        conn.commit()
+        db.add(new_category)
+        db.commit()
 
         return {"message": "Catégorie ajoutée avec succès"}
     except Exception as e:
         print(f"Erreur lors de l'ajout de la catégorie : {e}")
         return {"message": f"Erreur lors de l'ajout de la catégorie : {e}"}
+
 
 
 @app.get("/translation", response_class=HTMLResponse)
