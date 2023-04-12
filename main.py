@@ -2,6 +2,7 @@ import asyncpg
 import folium
 from fastapi import FastAPI, Request, Depends, Form
 from fastapi.responses import HTMLResponse
+from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 import os
@@ -12,7 +13,7 @@ from psycopg2.extras import execute_values
 import pandas as pd
 import numpy as np
 from sqlalchemy.orm import Session
-
+from database import get_db
 
 import models
 import schemas
@@ -237,26 +238,26 @@ async def root(request: Request, conn=Depends(connect_to_db)):
 
 
 @app.post("/add_category")
-async def add_category(request: Request, product_name: schemas.Product_name, product_category_name_french: str = Form(...), conn=Depends(connect_to_db)):
+async def add_category(request: Request, db: Session = Depends(get_db), response_class=RedirectResponse):
     try:
+
+        form_data = await request.form()
+        product_category_name_french = form_data["product_category_name_french"]
         # Traduction en portugais brésilien et anglais
         translation_pt, translation_en = translate_to_pt_and_en(
             product_category_name_french)
 
         # Insérer la nouvelle catégorie
-        # insert_query = """INSERT INTO product_category_name_translation (product_category_name, product_category_name_english, product_category_name_french)
-        #                     VALUES ($1, $2, $3);"""
         new_category = models.ProductCategory(
             product_category_name=translation_pt,
             product_category_name_english=translation_en,
             product_category_name_french=product_category_name_french
         )
-        # Ajouter la nouvelle catégorie à la session
-        conn.add(new_category)
-        # Effectuer la transaction
-        conn.commit()
+        db.add(new_category)
+        db.commit()
 
-        return {"message": "Catégorie ajoutée avec succès"}
+        # Rediriger vers /translation
+        return RedirectResponse("/translation", status_code=303)
     except Exception as e:
         print(f"Erreur lors de l'ajout de la catégorie : {e}")
         return {"message": f"Erreur lors de l'ajout de la catégorie : {e}"}
