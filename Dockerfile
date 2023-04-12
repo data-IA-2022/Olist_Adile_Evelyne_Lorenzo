@@ -13,7 +13,7 @@ RUN pip install -r requirements.txt
 ENV OLIST=postgresql://writer:greta2023@localhost:5432/test
 
 # Exposition du port de l'application
-EXPOSE 80
+EXPOSE 5000
 
 # Commande pour démarrer l'application
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "80"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "5000"]
