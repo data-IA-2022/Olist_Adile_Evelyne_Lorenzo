@@ -4,11 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Exemple FastAPI avec Jinja2</title>
-    <script src="https://unpkg.com/htmx.org/dist/htmx.min.js%22%3E"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.0" integrity="sha384-aOxz9UdWG0yBiyrTwPeMibmaoq07/d3a96GCbb9x60f3mOt5zwkjdbcHFnKH8qls" crossorigin="anonymous"></script>
 </head>
 <body class='bg-dark'>
-    <form class='rounded-lg bg-white p-6 shadow-lg dark:bg-neutral-700' action ="/add_category" method="post" onsubmit="handleSubmit(event)">        <label for="product_category_name_french">Nom de catégorie en français:</label>
+    <form class='block rounded-lg bg-white p-6 shadow-lg dark:bg-neutral-700' action="/add_category" method="post" >
+        <label for="product_category_name_french">Nom de catégorie en français:</label>
         <input type="text" id="product_category_name_french" name="product_category_name_french" required>
         <button type="submit">Ajouter une catégorie</button>
     </form>
@@ -36,32 +37,8 @@
         </tbody>
     </table>
     </div>
-    
+
 </body>
-<script>
-    function handleSubmit(event) {
-        event.preventDefault();
-        const formData = new FormData(event.target);
-      
-        fetch('/add_category', {
-          method: 'POST',
-          body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-          console.log(data);
-          const tableBody = document.querySelector('#categories-table tbody');
-          const newRow = document.createElement('tr');
-          newRow.innerHTML = 
-              `<td>${data.id}</td>
-              <td>${formData.get('product_category_name_french')}</td>
-              <td>${data.product_category_name_english}</td>
-              <td>${data.product_category_name_french}</td>`;
-          tableBody.appendChild(newRow);
-      
-          window.location.reload();
-        })
-        .catch(error => console.error(error));
-      }
-</script>
+
+    
 </html>
