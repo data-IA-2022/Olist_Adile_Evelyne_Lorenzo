@@ -165,6 +165,25 @@ async def update_geolocation(conn):
     except Exception as e:
         print(
             f"Erreur lors de la mise à jour des coordonnées de géopoint : {e}")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
+
+
+async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    try:
+        payload = jwt.decode(token.split("Bearer ")[
+                             1], SECRET_KEY, algorithms=[ALGORITHM])
+        username = payload.get("sub")
+        if username is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Identifiants invalides")
+        user = db.query(models.User).filter_by(username=username).first()
+        if user is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Identifiants invalides")
+    except (jwt.JWTError, IndexError):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Identifiants invalides")
+    return user
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -282,7 +301,7 @@ async def add_category(request: Request, db: Session = Depends(get_db), response
 
 
 @app.get("/translation", response_class=HTMLResponse)
-async def get_translations(request: Request, conn=Depends(get_connection)):
+async def get_translations(request: Request, current_user: models.User = Depends(get_current_user), conn=Depends(get_connection)):
     query = "SELECT * FROM product_category_name_translation ORDER BY id DESC;"
 
     cats = await conn.fetch(query)
@@ -303,11 +322,13 @@ async def register_user(username: str = Form(...), password: str = Form(...), db
     if db.query(models.User).filter_by(username=username).first():
         raise HTTPException(
             status_code=400, detail="L'utilisateur existe déjà")
-    # Hasher le mot de passe
-    password_hash = bcrypt.hashpw(
-        password.encode('utf-8'), bcrypt.gensalt())
-    # Ajouter l'utilisateur à la base de données
-    new_user = models.User(username=username, password_hash=password_hash)
+    # Générer le salt pour le hashage de mot de passe
+    salt = bcrypt.gensalt()
+    # Hasher le mot de passe avec le salt généré
+    password_hash = bcrypt.hashpw(password.encode('utf-8'), salt)
+    # Ajouter l'utilisateur à la base de données avec le salt utilisé pour le hashage
+    new_user = models.User(
+        username=username, password_hash=password_hash, salt=salt)
     db.add(new_user)
     db.commit()
     return {"message": "L'utilisateur a été enregistré avec succès"}
@@ -318,18 +339,45 @@ async def login_form(request: Request):
     return templates.TemplateResponse("auth/login.html", {"request": request})
 
 
+# @app.post("/login")
+# async def login(request: Request, username: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
+#     user = db.query(models.User).filter_by(username=username).first()
+
+#     if not user:
+#         raise HTTPException(
+#             status_code=status.HTTP_401_UNAUTHORIZED, detail="Identifiants invalides")
+#     else:
+#         stored_password_hash = user.password_hash
+#         if not bcrypt.checkpw(password.encode('utf-8'), stored_password_hash):
+#             raise HTTPException(
+#                 status_code=status.HTTP_401_UNAUTHORIZED, detail="Identifiants invalides")
+
+#     access_token = create_access_token(data={"sub": username})
+#     response = JSONResponse(content={"message": "Connexion réussie"})
+#     response.set_cookie(
+#         key="access_token", value=f"Bearer {access_token}", httponly=True, max_age=1800, expires=1800)
+#     return response
+
+
 @app.post("/login")
 async def login(request: Request, username: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
     user = db.query(models.User).filter_by(username=username).first()
 
-    if not user or not bcrypt.checkpw(password.encode('utf-8'), user.password_hash.encode('utf-8')):
+    if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Identifiants invalides")
+    else:
+        stored_password_hash = user.password_hash
+        if not bcrypt.checkpw(password.encode('utf-8'), stored_password_hash):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Identifiants invalides")
 
+    # Generate JWT token
     access_token = create_access_token(data={"sub": username})
+    # Set cookie with JWT token
     response = JSONResponse(content={"message": "Connexion réussie"})
     response.set_cookie(
-        key="access_token", value=f"Bearer {access_token}", httponly=True, max_age=1800, expires=1800)
+        key="access_token", value={access_token}, httponly=True, max_age=1800, expires=1800)
     return response
 
 
@@ -341,25 +389,29 @@ def create_access_token(data: dict):
     return encoded_jwt
 
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
+# oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
 
 
-async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username = payload.get("sub")
-        if username is None:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="Identifiants invalides")
-        user = db.query(models.User).filter_by(username=username).first()
-        if user is None:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="Identifiants invalides")
-    except jwt.PyJWTError:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Identifiants invalides")
-    return user
+# async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+#     try:
+#         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+#         username = payload.get("sub")
+#         if username is None:
+#             raise HTTPException(
+#                 status_code=status.HTTP_401_UNAUTHORIZED, detail="Identifiants invalides")
+#         user = db.query(models.User).filter_by(username=username).first()
+#         if user is None:
+#             raise HTTPException(
+#                 status_code=status.HTTP_401_UNAUTHORIZED, detail="Identifiants invalides")
+#     except jwt.PyJWTError:
+#         raise HTTPException(
+#             status_code=status.HTTP_401_UNAUTHORIZED, detail="Identifiants invalides")
+#     return user
 
+
+# @app.get("/protected-route")
+# async def protected_route(current_user: models.User = Depends(get_current_user)):
+#     return {"message": f"Bienvenue, {current_user.username}"}
 
 @app.get("/protected-route")
 async def protected_route(current_user: models.User = Depends(get_current_user)):
