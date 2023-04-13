@@ -23,7 +23,19 @@ import yaml
 
 import models
 import schemas
+from fastapi import FastAPI, Request, Depends, HTTPException, Form, status
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from fastapi.responses import HTMLResponse, RedirectResponse
+from sqlalchemy.orm import Session
+import bcrypt
+import uuid
 
+from fastapi import FastAPI, Request, Depends, HTTPException, Form, status
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from fastapi.responses import HTMLResponse, RedirectResponse
+from sqlalchemy.orm import Session
+import bcrypt
+import uuid
 
 # from bokeh.plotting import figure, show
 # from bokeh.tile_providers import get_provider, WIKIMEDIA, CARTODBPOSITRON, STAMEN_TERRAIN, STAMEN_TONER, ESRI_IMAGERY, OSM
@@ -284,23 +296,70 @@ async def get_translations(request: Request, conn=Depends(get_connection)):
     return templates.TemplateResponse("translation/translation.html", {"request": request, "rows": cats})
 
 
-# Route d'enregistrement
-@app.route("/register", methods=["GET", "POST"])
-def register_user(request: Request, username: Form(str) = None, password: Form(str) = None, db: Session = Depends(get_db)):
-    if request.method == "POST":
-        # Vérifier si l'utilisateur existe déjà
-        if db.query(models.User).filter_by(username=username).first():
-            raise HTTPException(
-                status_code=400, detail="L'utilisateur existe déjà")
-        # Hasher le mot de passe
-        password_hash = bcrypt.hashpw(
-            password.encode('utf-8'), bcrypt.gensalt())
-        print(password_hash)
-        # Ajouter l'utilisateur à la base de données
-        new_user = models.User(username=username, password_hash=password_hash)
-        db.add(new_user)
-        db.commit()
-        return {"message": "L'utilisateur a été enregistré avec succès"}
 
-    # Afficher le formulaire d'enregistrement
+@app.get("/register")
+async def register_form(request: Request):
     return templates.TemplateResponse("auth/register.html", {"request": request})
+
+@app.post("/register", response_model=None)
+async def register_user(username: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
+    # Vérifier si l'utilisateur existe déjà
+    if db.query(models.User).filter_by(username=username).first():
+        raise HTTPException(
+            status_code=400, detail="L'utilisateur existe déjà")
+    # Hasher le mot de passe
+    password_hash = bcrypt.hashpw(
+        password.encode('utf-8'), bcrypt.gensalt())
+    # Ajouter l'utilisateur à la base de données
+    new_user = models.User(username=username, password_hash=password_hash)
+    db.add(new_user)
+    db.commit()
+    return {"message": "L'utilisateur a été enregistré avec succès"}
+
+security = HTTPBasic()
+
+def create_session_token():
+    return str(uuid.uuid4())
+
+def verify_password(plain_password, hashed_password):
+    return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password)
+
+def authenticate_user(username: str, password: str, db: Session):
+    user = db.query(models.User).filter(models.User.username == username).first()
+    if not user:
+        return None
+    if not verify_password(password, user.password_hash):
+        return None
+    return user
+
+def get_current_user(token: str, db: Session):
+    session = db.query(models.Session).filter(models.Session.token == token).first()
+    if not session:
+        return None
+    return session.user
+
+@app.get("/login", response_class=HTMLResponse)
+async def login_form(request: Request, error: str = None):
+    return templates.TemplateResponse("auth/login.html", {"request": request, "error": error})
+
+@app.post("/login", response_class=HTMLResponse)
+def login(credentials: HTTPBasicCredentials = Depends(security), db: Session = Depends(get_db)):
+    user = authenticate_user(credentials.username, credentials.password, db)
+    if not user:
+        return templates.TemplateResponse("auth/login.html", {"request": request, "error": "Identifiants invalides"})
+    token = create_session_token()
+    session = models.Session(user_id=user.id, token=token)
+    db.add(session)
+    db.commit()
+    response = RedirectResponse(url="/protected", status_code=status.HTTP_303_SEE_OTHER)
+    response.set_cookie(key="token", value=token)
+    return response
+
+@app.get("/protected", response_class=HTMLResponse)
+def protected(request: Request, token: str = None, db: Session = Depends(get_db)):
+    if not token:
+        token = request.cookies.get("token")
+    user = get_current_user(token, db)
+    if not user:
+        return templates.TemplateResponse("auth/login.html", {"request": request, "error": "Non authentifié"})
+    return templates.TemplateResponse("auth/protected.html", {"request": request, "error": "Non authentifié"})
