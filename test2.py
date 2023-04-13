@@ -56,16 +56,4 @@ def login(credentials: HTTPBasicCredentials = Depends(security), db: Session = D
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Identifiants invalides")
     return {"message": "Connexion réussie"}
 
-# Dépendance pour obtenir une session de base de données
-
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-
-# Créer la table des utilisateurs dans la base de données
-Base.metadata.create_all(bind=engine)
+# Dépendance pour obtenir une session de base de donnée
