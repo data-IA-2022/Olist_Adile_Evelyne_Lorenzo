@@ -333,7 +333,7 @@ async def login_form(request: Request):
 async def login(request: Request, username: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
     user = db.query(models.User).filter_by(username=username).first()
 
-    if not user or not bcrypt.checkpw(password.encode('utf-8'), user.password_hash.encode('utf-8')):
+    if not user or not bcrypt.checkpw(password.encode('utf-8'), user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Identifiants invalides")
 
@@ -342,6 +342,7 @@ async def login(request: Request, username: str = Form(...), password: str = For
     response.set_cookie(
         key="access_token", value=f"Bearer {access_token}", httponly=True, max_age=1800, expires=1800)
     return response
+
 
 
 def create_access_token(data: dict):
