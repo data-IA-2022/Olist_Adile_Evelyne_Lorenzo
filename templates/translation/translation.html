@@ -1,12 +1,11 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Exemple FastAPI avec Jinja2</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/htmx.org@1.9.0" integrity="sha384-aOxz9UdWG0yBiyrTwPeMibmaoq07/d3a96GCbb9x60f3mOt5zwkjdbcHFnKH8qls" crossorigin="anonymous"></script>
-</head>
+
+{% extends "base.html" %}
+
+{% block title %}
+    Traduction
+{% endblock %}
+
+{% block content %}
 <body class='bg-dark'>
     <form class='block rounded-lg bg-white p-6 shadow-lg dark:bg-neutral-700' action="/add_category" method="post" >
         <label for="product_category_name_french">Nom de catégorie en français:</label>
@@ -37,8 +36,4 @@
         </tbody>
     </table>
     </div>
-
-</body>
-
-    
-</html>
+{% endblock %}
