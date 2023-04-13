@@ -53,10 +53,6 @@ class TokenData(BaseModel):
     username: Optional[str] = None
 
 
-def get_user(username: str, db=Depends(get_db)):
-    return db.query(models.User).filter(models.User.username == username).first()
-
-
 SECRET_KEY = "3369272D83B2A6EFC59562D221B3F"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
@@ -230,8 +226,12 @@ async def register_user(username: str = Form(...), password: str = Form(...), db
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
+def get_user(username: str, db=Depends(get_db)):
+    return db.query(models.User).filter(models.User.username == username).first()
+
+
 def authenticate_user(db, username: str, password: str):
-    user = db.get_user(username)
+    user = get_user(username, db)
     if not user:
         return None
     password_hash = user.password_hash
@@ -297,8 +297,24 @@ async def login(request: Request, username: str = Form(...), password: str = For
     return response
 
 
+async def get_current_user(token: str = Depends(oauth2_scheme), db=Depends(get_db)):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        if username is None:
+            raise credentials_exception
+        user = get_user(username, db)
+    except jwt.JWTError:
+        raise credentials_exception
+
+    if user is None:
+        raise credentials_exception
+
+    return user
+
+
 @app.get("/", response_class=HTMLResponse)
-async def root(request: Request, conn=Depends(get_connection)):
+async def root(request: Request, conn=Depends(get_connection), token: str = Depends(oauth2_scheme)):
     query = "SELECT * FROM olist_customers LIMIT 15;"
     rows = await conn.fetch(query)
     return templates.TemplateResponse("home/index.html", {"request": request, "rows": rows})
