@@ -180,10 +180,14 @@ async def update_geolocation(conn):
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
 
 
-async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db), request: Request = None):
+    if request:
+        access_token = request.cookies.get("access_token")
+    else:
+        access_token = token
+
     try:
-        payload = jwt.decode(token.split("Bearer ")[
-                             1], SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(access_token, SECRET_KEY, algorithms=[ALGORITHM])
         username = payload.get("sub")
         if username is None:
             raise HTTPException(
@@ -192,10 +196,11 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
         if user is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="Identifiants invalides")
-    except (jwt.JWTError, IndexError):
+    except jwt.PyJWTError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Identifiants invalides")
     return user
+
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -203,6 +208,106 @@ async def root(request: Request, conn=Depends(get_connection)):
     query = "SELECT * FROM olist_customers LIMIT 15;"
     rows = await conn.fetch(query)
     return templates.TemplateResponse("home/index.html", {"request": request, "rows": rows})
+
+
+
+# Route d'enregistrement
+
+@app.get("/register")
+async def register_form(request: Request):
+    return templates.TemplateResponse("auth/register.html", {"request": request})
+
+@app.post("/register", response_model=None)
+async def register_user(username: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
+    # Vérifier si l'utilisateur existe déjà
+    if db.query(models.User).filter_by(username=username).first():
+        raise HTTPException(
+            status_code=400, detail="L'utilisateur existe déjà")
+    # Générer le salt pour le hashage de mot de passe
+    salt = bcrypt.gensalt()
+    # Hasher le mot de passe avec le salt généré
+    password_hash = bcrypt.hashpw(password.encode('utf-8'), salt)
+    # Ajouter l'utilisateur à la base de données avec le salt utilisé pour le hashage
+    new_user = models.User(
+        username=username, password_hash=password_hash, salt=salt)
+    db.add(new_user)
+    db.commit()
+    return {"message": "L'utilisateur a été enregistré avec succès"}
+
+
+@app.get("/login")
+async def login_form(request: Request):
+    return templates.TemplateResponse("auth/login.html", {"request": request})
+
+@app.post("/login")
+async def login(request: Request, username: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
+    user = db.query(models.User).filter_by(username=username).first()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Identifiants invalides")
+    else:
+        stored_password_hash = user.password_hash
+        if not bcrypt.checkpw(password.encode('utf-8'), stored_password_hash):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Identifiants invalides")
+
+    # Generate JWT token
+    access_token = create_access_token(data={"sub": username})
+    # Set cookie with JWT token
+    response = JSONResponse(content={"message": "Connexion réussie"})
+    response.set_cookie(
+        key="access_token", value=f"Bearer {access_token}", httponly=True, max_age=1800, expires=1800)
+    return response
+
+
+def create_access_token(data: dict):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+
+@app.get("/protected-route")
+async def protected_route(current_user: models.User = Depends(get_current_user)):
+    return {"message": f"Bienvenue, {current_user.username}"}
+
+
+
+@app.post("/add_category")
+async def add_category(request: Request, db: Session = Depends(get_db), response_class=RedirectResponse):
+    try:
+
+        form_data = await request.form()
+        product_category_name_french = form_data["product_category_name_french"]
+        # Traduction en portugais brésilien et anglais
+        translation_pt, translation_en = translate_to_pt_and_en(
+            product_category_name_french)
+
+        # Insérer la nouvelle catégorie
+        new_category = models.ProductCategory(
+            product_category_name=translation_pt,
+            product_category_name_english=translation_en,
+            product_category_name_french=product_category_name_french
+        )
+        db.add(new_category)
+        db.commit()
+
+        # Rediriger vers /translation
+        return RedirectResponse("/translation", status_code=303)
+    except Exception as e:
+        print(f"Erreur lors de l'ajout de la catégorie : {e}")
+        return {"message": f"Erreur lors de l'ajout de la catégorie : {e}"}
+
+
+@app.get("/translation", response_class=HTMLResponse)
+async def get_translations(request: Request, current_user: models.User = Depends(get_current_user), conn=Depends(get_connection)):
+    query = "SELECT * FROM product_category_name_translation ORDER BY id DESC;"
+
+    cats = await conn.fetch(query)
+    return templates.TemplateResponse("translation/translation.html", {"request": request, "rows": cats})
+
 
 
 # def lat_lng_to_mercator(lat, lng):
@@ -284,147 +389,3 @@ async def root(request: Request, conn=Depends(get_connection)):
 #     plot_html = file_html(p, CDN, "my plot")
 
 #     return templates.TemplateResponse("seller_zip_codes.html", {"request": request, "plot_html": plot_html})
-
-
-@app.post("/add_category")
-async def add_category(request: Request, db: Session = Depends(get_db), response_class=RedirectResponse):
-    try:
-
-        form_data = await request.form()
-        product_category_name_french = form_data["product_category_name_french"]
-        # Traduction en portugais brésilien et anglais
-        translation_pt, translation_en = translate_to_pt_and_en(
-            product_category_name_french)
-
-        # Insérer la nouvelle catégorie
-        new_category = models.ProductCategory(
-            product_category_name=translation_pt,
-            product_category_name_english=translation_en,
-            product_category_name_french=product_category_name_french
-        )
-        db.add(new_category)
-        db.commit()
-
-        # Rediriger vers /translation
-        return RedirectResponse("/translation", status_code=303)
-    except Exception as e:
-        print(f"Erreur lors de l'ajout de la catégorie : {e}")
-        return {"message": f"Erreur lors de l'ajout de la catégorie : {e}"}
-
-
-@app.get("/translation", response_class=HTMLResponse)
-async def get_translations(request: Request, current_user: models.User = Depends(get_current_user), conn=Depends(get_connection)):
-    query = "SELECT * FROM product_category_name_translation ORDER BY id DESC;"
-
-    cats = await conn.fetch(query)
-    return templates.TemplateResponse("translation/translation.html", {"request": request, "rows": cats})
-
-
-# Route d'enregistrement
-
-
-@app.get("/register")
-async def register_form(request: Request):
-    return templates.TemplateResponse("auth/register.html", {"request": request})
-
-@app.post("/register", response_model=None)
-async def register_user(username: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
-    # Vérifier si l'utilisateur existe déjà
-    if db.query(models.User).filter_by(username=username).first():
-        raise HTTPException(
-            status_code=400, detail="L'utilisateur existe déjà")
-    # Générer le salt pour le hashage de mot de passe
-    salt = bcrypt.gensalt()
-    # Hasher le mot de passe avec le salt généré
-    password_hash = bcrypt.hashpw(password.encode('utf-8'), salt)
-    # Ajouter l'utilisateur à la base de données avec le salt utilisé pour le hashage
-    new_user = models.User(
-        username=username, password_hash=password_hash, salt=salt)
-    db.add(new_user)
-    db.commit()
-    return {"message": "L'utilisateur a été enregistré avec succès"}
-
-
-@app.get("/login")
-async def login_form(request: Request):
-    return templates.TemplateResponse("auth/login.html", {"request": request})
-
-
-# @app.post("/login")
-# async def login(request: Request, username: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
-#     user = db.query(models.User).filter_by(username=username).first()
-
-#     if not user:
-#         raise HTTPException(
-#             status_code=status.HTTP_401_UNAUTHORIZED, detail="Identifiants invalides")
-#     else:
-#         stored_password_hash = user.password_hash
-#         if not bcrypt.checkpw(password.encode('utf-8'), stored_password_hash):
-#             raise HTTPException(
-#                 status_code=status.HTTP_401_UNAUTHORIZED, detail="Identifiants invalides")
-
-#     access_token = create_access_token(data={"sub": username})
-#     response = JSONResponse(content={"message": "Connexion réussie"})
-#     response.set_cookie(
-#         key="access_token", value=f"Bearer {access_token}", httponly=True, max_age=1800, expires=1800)
-#     return response
-
-
-@app.post("/login")
-async def login(request: Request, username: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
-    user = db.query(models.User).filter_by(username=username).first()
-
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Identifiants invalides")
-    else:
-        stored_password_hash = user.password_hash
-        if not bcrypt.checkpw(password.encode('utf-8'), stored_password_hash):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="Identifiants invalides")
-
-    # Generate JWT token
-    access_token = create_access_token(data={"sub": username})
-    # Set cookie with JWT token
-    response = JSONResponse(content={"message": "Connexion réussie"})
-    response.set_cookie(
-        key="access_token", value={access_token}, httponly=True, max_age=1800, expires=1800)
-    return response
-
-
-
-def create_access_token(data: dict):
-    to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
-
-
-# oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
-
-
-# async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
-#     try:
-#         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-#         username = payload.get("sub")
-#         if username is None:
-#             raise HTTPException(
-#                 status_code=status.HTTP_401_UNAUTHORIZED, detail="Identifiants invalides")
-#         user = db.query(models.User).filter_by(username=username).first()
-#         if user is None:
-#             raise HTTPException(
-#                 status_code=status.HTTP_401_UNAUTHORIZED, detail="Identifiants invalides")
-#     except jwt.PyJWTError:
-#         raise HTTPException(
-#             status_code=status.HTTP_401_UNAUTHORIZED, detail="Identifiants invalides")
-#     return user
-
-
-# @app.get("/protected-route")
-# async def protected_route(current_user: models.User = Depends(get_current_user)):
-#     return {"message": f"Bienvenue, {current_user.username}"}
-
-@app.get("/protected-route")
-async def protected_route(current_user: models.User = Depends(get_current_user)):
-    return {"message": f"Bienvenue, {current_user.username}"}
