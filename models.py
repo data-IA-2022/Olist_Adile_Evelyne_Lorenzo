@@ -28,3 +28,4 @@ class ProductCategory(Base):
 
     def is_filled(self):
         return self.product_category_name_english != '' and self.product_category_name_french != '' and self.product_category_name_french is not None and self.product_category_name_english is not None
+
