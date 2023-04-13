@@ -19,9 +19,9 @@
     }
 </style>
 <h1>Connexion</h1>
-<form id="login-form">
-    <input type="text" id="login-username" placeholder="Nom d'utilisateur" required>
-    <input type="password" id="login-password" placeholder="Mot de passe" required>
+<form id="login-form" action="/login" method="post">
+    <input type="text" id="login-username" placeholder="Nom d'utilisateur" name="username" required>
+    <input type="password" id="login-password" placeholder="Mot de passe" name="password" required>
     <button type="submit">Se connecter</button>
 </form>
 

@@ -1,5 +1,7 @@
-from fastapi.responses import HTMLResponse
-from fastapi.responses import RedirectResponse
+from fastapi import Depends, HTTPException
+from fastapi.security import OAuth2PasswordBearer
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -8,22 +10,25 @@ from googletrans import Translator
 
 from sqlalchemy.orm import Session
 from database import get_db
-from fastapi import FastAPI, Depends, HTTPException, status, Request, Form
-from fastapi.security import HTTPBasic, HTTPBasicCredentials
-from sqlalchemy import create_engine, Column, Integer, String
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.orm import Session
+from fastapi import FastAPI, Depends, HTTPException, status, Request, Form, Body
+
 from database import get_db
 import bcrypt
 import models
 import asyncpg
 
 import yaml
+import jwt
+from datetime import datetime, timedelta
+from fastapi import Cookie
 
 import models
 import schemas
 
+
+SECRET_KEY = "3369272D83B2A6EFC59562D221B3F"
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 # from bokeh.plotting import figure, show
 # from bokeh.tile_providers import get_provider, WIKIMEDIA, CARTODBPOSITRON, STAMEN_TERRAIN, STAMEN_TONER, ESRI_IMAGERY, OSM
@@ -285,22 +290,77 @@ async def get_translations(request: Request, conn=Depends(get_connection)):
 
 
 # Route d'enregistrement
-@app.route("/register", methods=["GET", "POST"])
-def register_user(request: Request, username: Form(str) = None, password: Form(str) = None, db: Session = Depends(get_db)):
-    if request.method == "POST":
-        # Vérifier si l'utilisateur existe déjà
-        if db.query(models.User).filter_by(username=username).first():
-            raise HTTPException(
-                status_code=400, detail="L'utilisateur existe déjà")
-        # Hasher le mot de passe
-        password_hash = bcrypt.hashpw(
-            password.encode('utf-8'), bcrypt.gensalt())
-        print(password_hash)
-        # Ajouter l'utilisateur à la base de données
-        new_user = models.User(username=username, password_hash=password_hash)
-        db.add(new_user)
-        db.commit()
-        return {"message": "L'utilisateur a été enregistré avec succès"}
 
-    # Afficher le formulaire d'enregistrement
+
+@app.get("/register")
+async def register_form(request: Request):
     return templates.TemplateResponse("auth/register.html", {"request": request})
+
+
+@app.post("/register", response_model=None)
+async def register_user(username: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
+    # Vérifier si l'utilisateur existe déjà
+    if db.query(models.User).filter_by(username=username).first():
+        raise HTTPException(
+            status_code=400, detail="L'utilisateur existe déjà")
+    # Hasher le mot de passe
+    password_hash = bcrypt.hashpw(
+        password.encode('utf-8'), bcrypt.gensalt())
+    # Ajouter l'utilisateur à la base de données
+    new_user = models.User(username=username, password_hash=password_hash)
+    db.add(new_user)
+    db.commit()
+    return {"message": "L'utilisateur a été enregistré avec succès"}
+
+
+@app.get("/login")
+async def login_form(request: Request):
+    return templates.TemplateResponse("auth/login.html", {"request": request})
+
+
+@app.post("/login")
+async def login(request: Request, username: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
+    user = db.query(models.User).filter_by(username=username).first()
+
+    if not user or not bcrypt.checkpw(password.encode('utf-8'), user.password_hash.encode('utf-8')):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Identifiants invalides")
+
+    access_token = create_access_token(data={"sub": username})
+    response = JSONResponse(content={"message": "Connexion réussie"})
+    response.set_cookie(
+        key="access_token", value=f"Bearer {access_token}", httponly=True, max_age=1800, expires=1800)
+    return response
+
+
+def create_access_token(data: dict):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
+
+
+async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username = payload.get("sub")
+        if username is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Identifiants invalides")
+        user = db.query(models.User).filter_by(username=username).first()
+        if user is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Identifiants invalides")
+    except jwt.PyJWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Identifiants invalides")
+    return user
+
+
+@app.get("/protected-route")
+async def protected_route(current_user: models.User = Depends(get_current_user)):
+    return {"message": f"Bienvenue, {current_user.username}"}
