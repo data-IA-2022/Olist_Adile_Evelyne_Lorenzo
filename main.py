@@ -1,5 +1,7 @@
-from fastapi.responses import HTMLResponse
-from fastapi.responses import RedirectResponse
+from fastapi import Depends, HTTPException
+from fastapi.security import OAuth2PasswordBearer
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -8,18 +10,17 @@ from googletrans import Translator
 
 from sqlalchemy.orm import Session
 from database import get_db
-from fastapi import FastAPI, Depends, HTTPException, status, Request, Form
-from fastapi.security import HTTPBasic, HTTPBasicCredentials
-from sqlalchemy import create_engine, Column, Integer, String
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.orm import Session
+from fastapi import FastAPI, Depends, HTTPException, status, Request, Form, Body
+
 from database import get_db
 import bcrypt
 import models
 import asyncpg
 
 import yaml
+import jwt
+from datetime import datetime, timedelta
+from fastapi import Cookie
 
 import models
 import schemas
@@ -36,6 +37,10 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 import bcrypt
 import uuid
+
+SECRET_KEY = "3369272D83B2A6EFC59562D221B3F"
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 # from bokeh.plotting import figure, show
 # from bokeh.tile_providers import get_provider, WIKIMEDIA, CARTODBPOSITRON, STAMEN_TERRAIN, STAMEN_TONER, ESRI_IMAGERY, OSM
@@ -296,6 +301,8 @@ async def get_translations(request: Request, conn=Depends(get_connection)):
     return templates.TemplateResponse("translation/translation.html", {"request": request, "rows": cats})
 
 
+# Route d'enregistrement
+
 
 @app.get("/register")
 async def register_form(request: Request):
@@ -316,50 +323,55 @@ async def register_user(username: str = Form(...), password: str = Form(...), db
     db.commit()
     return {"message": "L'utilisateur a été enregistré avec succès"}
 
-security = HTTPBasic()
 
-def create_session_token():
-    return str(uuid.uuid4())
+@app.get("/login")
+async def login_form(request: Request):
+    return templates.TemplateResponse("auth/login.html", {"request": request})
 
-def verify_password(plain_password, hashed_password):
-    return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password)
 
-def authenticate_user(username: str, password: str, db: Session):
-    user = db.query(models.User).filter(models.User.username == username).first()
-    if not user:
-        return None
-    if not verify_password(password, user.password_hash):
-        return None
-    return user
+@app.post("/login")
+async def login(request: Request, username: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
+    user = db.query(models.User).filter_by(username=username).first()
 
-def get_current_user(token: str, db: Session):
-    session = db.query(models.Session).filter(models.Session.token == token).first()
-    if not session:
-        return None
-    return session.user
+    if not user or not bcrypt.checkpw(password.encode('utf-8'), user.password_hash.encode('utf-8')):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Identifiants invalides")
 
-@app.get("/login", response_class=HTMLResponse)
-async def login_form(request: Request, error: str = None):
-    return templates.TemplateResponse("auth/login.html", {"request": request, "error": error})
-
-@app.post("/login", response_class=HTMLResponse)
-def login(credentials: HTTPBasicCredentials = Depends(security), db: Session = Depends(get_db)):
-    user = authenticate_user(credentials.username, credentials.password, db)
-    if not user:
-        return templates.TemplateResponse("auth/login.html", {"request": request, "error": "Identifiants invalides"})
-    token = create_session_token()
-    session = models.Session(user_id=user.id, token=token)
-    db.add(session)
-    db.commit()
-    response = RedirectResponse(url="/protected", status_code=status.HTTP_303_SEE_OTHER)
-    response.set_cookie(key="token", value=token)
+    access_token = create_access_token(data={"sub": username})
+    response = JSONResponse(content={"message": "Connexion réussie"})
+    response.set_cookie(
+        key="access_token", value=f"Bearer {access_token}", httponly=True, max_age=1800, expires=1800)
     return response
 
-@app.get("/protected", response_class=HTMLResponse)
-def protected(request: Request, token: str = None, db: Session = Depends(get_db)):
-    if not token:
-        token = request.cookies.get("token")
-    user = get_current_user(token, db)
-    if not user:
-        return templates.TemplateResponse("auth/login.html", {"request": request, "error": "Non authentifié"})
-    return templates.TemplateResponse("auth/protected.html", {"request": request, "error": "Non authentifié"})
+
+def create_access_token(data: dict):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
+
+
+async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username = payload.get("sub")
+        if username is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Identifiants invalides")
+        user = db.query(models.User).filter_by(username=username).first()
+        if user is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Identifiants invalides")
+    except jwt.PyJWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Identifiants invalides")
+    return user
+
+
+@app.get("/protected-route")
+async def protected_route(current_user: models.User = Depends(get_current_user)):
+    return {"message": f"Bienvenue, {current_user.username}"}
