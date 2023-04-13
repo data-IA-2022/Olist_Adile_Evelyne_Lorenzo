@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String
+from sqlalchemy import Column, String, Integer
 
 from database import Base
 
@@ -19,6 +19,7 @@ class ProductCategory(Base):
                 }
 
     # setter sur champ product_category_name_french
+
     def set_FR(self, x):
         self.product_category_name_french = x
 
@@ -29,3 +30,11 @@ class ProductCategory(Base):
     def is_filled(self):
         return self.product_category_name_english != '' and self.product_category_name_french != '' and self.product_category_name_french is not None and self.product_category_name_english is not None
 
+# Modèle de la table des utilisateurs
+
+
+class User(Base):
+    __tablename__ = "users"
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String, unique=True, index=True)
+    password_hash = Column(String)

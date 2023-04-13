@@ -1,19 +1,25 @@
-import asyncpg
-import folium
-from fastapi import FastAPI, Request, Depends, Form
 from fastapi.responses import HTMLResponse
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-import os
-import yaml
+
 from sshtunnel import SSHTunnelForwarder
 from googletrans import Translator
-from psycopg2.extras import execute_values
-import pandas as pd
-import numpy as np
+
 from sqlalchemy.orm import Session
 from database import get_db
+from fastapi import FastAPI, Depends, HTTPException, status, Request, Form
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from sqlalchemy import create_engine, Column, Integer, String
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import Session
+from database import get_db
+import bcrypt
+import models
+import asyncpg
+
+import yaml
 
 import models
 import schemas
@@ -276,3 +282,25 @@ async def get_translations(request: Request, conn=Depends(get_connection)):
 
     cats = await conn.fetch(query)
     return templates.TemplateResponse("translation/translation.html", {"request": request, "rows": cats})
+
+
+# Route d'enregistrement
+@app.route("/register", methods=["GET", "POST"])
+def register_user(request: Request, username: Form(str) = None, password: Form(str) = None, db: Session = Depends(get_db)):
+    if request.method == "POST":
+        # Vérifier si l'utilisateur existe déjà
+        if db.query(models.User).filter_by(username=username).first():
+            raise HTTPException(
+                status_code=400, detail="L'utilisateur existe déjà")
+        # Hasher le mot de passe
+        password_hash = bcrypt.hashpw(
+            password.encode('utf-8'), bcrypt.gensalt())
+        print(password_hash)
+        # Ajouter l'utilisateur à la base de données
+        new_user = models.User(username=username, password_hash=password_hash)
+        db.add(new_user)
+        db.commit()
+        return {"message": "L'utilisateur a été enregistré avec succès"}
+
+    # Afficher le formulaire d'enregistrement
+    return templates.TemplateResponse("auth/register.html", {"request": request})
