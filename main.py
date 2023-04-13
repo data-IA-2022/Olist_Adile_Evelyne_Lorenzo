@@ -107,17 +107,24 @@ async def update_translations(conn):
 
 async def connect_to_db():
     try:
-        print("Chargement de la configuration...")
-        print("Démarrage du tunnel SSH...")
         print("Connexion à la base de données...")
         conn = await asyncpg.connect(config["postgres"]["url"])
-        # print("Mise à jour des traductions...")
-        # await update_translations(conn)
-        # print("Mise à jour des coordonnées de géopoint...")
-        # await update_geolocation(conn)  # Ajouter cet appel
         return conn
     except Exception as e:
         print(f"Erreur lors de la connexion à la base de données : {e}")
+
+
+@app.on_event("startup")
+async def startup_event():
+    global ssh_tunnel, conn
+    print("Démarrage du tunnel SSH...")
+    ssh_tunnel.start()
+    print("Création d'une connexion unique à la base de données...")
+    conn = await connect_to_db()
+
+
+async def get_connection() -> asyncpg.Connection:
+    return conn
 
 
 async def update_geolocation(conn):
@@ -150,10 +157,10 @@ async def update_geolocation(conn):
 
 
 @app.get("/", response_class=HTMLResponse)
-async def root(request: Request, conn=Depends(connect_to_db)):
+async def root(request: Request, conn=Depends(get_connection)):
     query = "SELECT * FROM olist_customers LIMIT 15;"
     rows = await conn.fetch(query)
-    return templates.TemplateResponse("index.html", {"request": request, "rows": rows})
+    return templates.TemplateResponse("home/index.html", {"request": request, "rows": rows})
 
 
 # def lat_lng_to_mercator(lat, lng):
@@ -264,8 +271,8 @@ async def add_category(request: Request, db: Session = Depends(get_db), response
 
 
 @app.get("/translation", response_class=HTMLResponse)
-async def get_translations(request: Request, conn=Depends(connect_to_db)):
+async def get_translations(request: Request, conn=Depends(get_connection)):
     query = "SELECT * FROM product_category_name_translation ORDER BY id DESC;"
 
     cats = await conn.fetch(query)
-    return templates.TemplateResponse("translation.html", {"request": request, "rows": cats})
+    return templates.TemplateResponse("translation/translation.html", {"request": request, "rows": cats})

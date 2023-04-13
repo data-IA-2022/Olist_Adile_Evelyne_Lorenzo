@@ -1,0 +1,118 @@
+<nav class="bg-gray-800">
+    <div class="mx-auto max-w-7xl px-2 sm:px-6 lg:px-8">
+      <div class="relative flex h-16 items-center justify-between">
+        <div class="absolute inset-y-0 left-0 flex items-center sm:hidden">
+          <!-- Mobile menu button-->
+          <button type="button" class="inline-flex items-center justify-center rounded-md p-2 text-gray-400 hover:bg-gray-700 hover:text-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white" aria-controls="mobile-menu" aria-expanded="false">
+            <span class="sr-only">Open main menu</span>
+            <!--
+              Icon when menu is closed.
+  
+              Menu open: "hidden", Menu closed: "block"
+            -->
+            <svg class="block h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+            </svg>
+            <!--
+              Icon when menu is open.
+  
+              Menu open: "block", Menu closed: "hidden"
+            -->
+            <svg class="hidden h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <div class="flex flex-1 items-center justify-center sm:items-stretch sm:justify-start">
+          <div class="flex flex-shrink-0 items-center">
+            <svg width="76" height="30" viewBox="0 0 389.94 158.31" version="2.0" xmlns="http://www.w3.org/2000/svg">
+                <title>olist</title>
+                  <desc>Home site olist</desc>
+                  <g id="logotype">
+                      <rect x="129.81" y="0.02" width="29.46" height="155.8" style="fill:#ffffff"></rect>
+                      <path d="M55.88,46.55a55.88,55.88,0,1,0,55.88,55.88A55.88,55.88,0,0,0,55.88,46.55Zm0,83.31a27.44,27.44,0,1,1,27.44-27.43A27.44,27.44,0,0,1,55.88,129.86Z" style="fill:#ffffff"></path>
+                      <path d="M274.57,89.55c-9.13-3.74-17.22-7.27-17.22-14.13,0-5.19,5-8.31,10.58-8.31,8.3,0,16,4.16,21.57,9.14l12.2-22c-12.33-7.39-19.25-10.2-33.77-10.2-19.92,0-39,11.21-39,33.44,0,19.11,14.31,26.59,27.38,32.2,10.79,4.78,20.75,8.1,20.75,15.79,0,6.64-7.89,9.55-13.9,9.55-10.58,0-17.43-4.78-25.73-12.88L225.69,143c12.33,9.86,21.91,15.28,38.92,15.28,21.16,0,41.91-11,41.91-35.11C306.52,102.43,288.67,95.37,274.57,89.55Z" style="fill:#ffffff"></path>
+                      <rect x="180.99" y="46.55" width="29.46" height="109.27" style="fill:#ffffff"></rect>
+                      <path d="M380.81,130.06A25.06,25.06,0,0,1,369,133.17c-6.22,0-8.71-3.94-9.54-10.38a68.2,68.2,0,0,1-.42-9.35V71.06h27.8V46.55H359V22.45H334.13l-4.57,24.1H316.49V71.06h13.07v45.49c0,6.44.42,12.88,2.08,18.28C335.58,149,347,158.31,364,158.31c8.51,0,18.88-2.29,25.94-6.44Z" style="fill:#ffffff"></path>
+                      <rect x="180.99" width="29.46" height="25.14" style="fill:#ffffff"></rect>
+                  </g>
+                </svg>
+          </div>
+          <div class="hidden sm:ml-6 sm:block">
+            <div class="flex space-x-4" x-data="{ active: localStorage.getItem('activePage') || 'home' }">
+                <button @click="active = 'home'; localStorage.setItem('activePage', 'home'); window.location.href = '{{ url_for('root') }}';" 
+                class="rounded-md px-3 py-2 text-sm font-medium"
+                :class="{ 'bg-gray-900 text-white': active === 'home', 'text-gray-300 hover:bg-gray-700 hover:text-white': active !== 'home' }"
+                x-bind:aria-current="active === 'home' ? 'page' : undefined">Accueil</button>
+            
+                <button @click="active = 'translations'; localStorage.setItem('activePage', 'translations'); window.location.href = '{{ url_for('get_translations') }}';" 
+                        class="rounded-md px-3 py-2 text-sm font-medium"
+                        :class="{ 'bg-gray-900 text-white': active === 'translations', 'text-gray-300 hover:bg-gray-700 hover:text-white': active !== 'translations' }"
+                        x-bind:aria-current="active === 'translations' ? 'page' : undefined">Traduction</button>
+            
+            
+                <a href="#" 
+                   class="rounded-md px-3 py-2 text-sm font-medium"
+                   :class="{ 'bg-gray-900 text-white': active === 'graphs', 'text-gray-300 hover:bg-gray-700 hover:text-white': active !== 'graphs' }"
+                   @click="active = 'graphs'"
+                   x-bind:aria-current="active === 'graphs' ? 'page' : undefined">Graphiques</a>
+            
+                <a href="#" 
+                   class="rounded-md px-3 py-2 text-sm font-medium"
+                   :class="{ 'bg-gray-900 text-white': active === 'contact', 'text-gray-300 hover:bg-gray-700 hover:text-white': active !== 'contact' }"
+                   @click="active = 'contact'"
+                   x-bind:aria-current="active === 'contact' ? 'page' : undefined">Contact</a>
+            </div>
+            
+          </div>
+        </div>
+        <div class="absolute inset-y-0 right-0 flex items-center pr-2 sm:static sm:inset-auto sm:ml-6 sm:pr-0">
+          <button type="button" class="rounded-full bg-gray-800 p-1 text-gray-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-gray-800">
+            <span class="sr-only">View notifications</span>
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+            </svg>
+          </button>
+  
+          <!-- Profile dropdown -->
+          <div class="relative ml-3" x-data="{ menuOpen: false }">
+            <div>
+                <button type="button" class="flex rounded-full bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-gray-800" id="user-menu-button" aria-expanded="false" aria-haspopup="true" @click="menuOpen = !menuOpen">
+                    <span class="sr-only">Open user menu</span>
+                    <img class="h-8 w-8 rounded-full" src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" alt="">
+                </button>
+            </div>
+        
+            <div class="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none" role="menu" aria-orientation="vertical" aria-labelledby="user-menu-button" tabindex="-1"
+                x-show="menuOpen"
+                x-transition:enter="transition ease-out duration-100"
+                x-transition:enter-start="transform opacity-0 scale-95"
+                x-transition:enter-end="transform opacity-100 scale-100"
+                x-transition:leave="transition ease-in duration-75"
+                x-transition:leave-start="transform opacity-100 scale-100"
+                x-transition:leave-end="transform opacity-0 scale-95">
+                <a href="#" class="block px-4 py-2 text-sm text-gray-700" role="menuitem" tabindex="-1" id="user-menu-item-0">Profil</a>
+                <a href="#" class="block px-4 py-2 text-sm text-gray-700" role="menuitem" tabindex="-1" id="user-menu-item-1">Paramètres</a>
+                <a href="#" class="block px-4 py-2 text-sm text-gray-700" role="menuitem" tabindex="-1" id="user-menu-item-2">Déconnexion</a>
+            </div>
+        </div>
+        
+        </div>
+      </div>
+    </div>
+  
+    <!-- Mobile menu, show/hide based on menu state. -->
+    <div class="sm:hidden" id="mobile-menu">
+      <div class="space-y-1 px-2 pb-3 pt-2">
+        <!-- Current: "bg-gray-900 text-white", Default: "text-gray-300 hover:bg-gray-700 hover:text-white" -->
+        <a href="#" class="bg-gray-900 text-white block rounded-md px-3 py-2 text-base font-medium" aria-current="page">Dashboard</a>
+  
+        <a href="#" class="text-gray-300 hover:bg-gray-700 hover:text-white block rounded-md px-3 py-2 text-base font-medium">Team</a>
+  
+        <a href="#" class="text-gray-300 hover:bg-gray-700 hover:text-white block rounded-md px-3 py-2 text-base font-medium">Projects</a>
+  
+        <a href="#" class="text-gray-300 hover:bg-gray-700 hover:text-white block rounded-md px-3 py-2 text-base font-medium">Calendar</a>
+      </div>
+    </div>
+  </nav>
+  
