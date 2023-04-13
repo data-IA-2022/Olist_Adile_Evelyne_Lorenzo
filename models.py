@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer
+from sqlalchemy import Column, String, Integer, LargeBinary
 
 from database import Base
 
@@ -35,6 +35,8 @@ class ProductCategory(Base):
 
 class User(Base):
     __tablename__ = "users"
+
     id = Column(Integer, primary_key=True, index=True)
-    username = Column(String, index=True)
-    password_hash = Column(String)
+    username = Column(String, unique=True, index=True)
+    password_hash = Column(LargeBinary)
+    salt = Column(LargeBinary)
