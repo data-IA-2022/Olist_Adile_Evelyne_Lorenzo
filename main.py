@@ -308,23 +308,14 @@ async def get_translations(request: Request, conn=Depends(get_connection)):
     cats = await conn.fetch(query)
     return templates.TemplateResponse("translation/translation.html", {"request": request, "rows": cats})
 
-import jwt
-import time
+from fastapi_cache import FastAPICache
+from fastapi_cache.backends.redis import RedisBackend
+from fastapi_cache.decorator import cache
 
-METABASE_SITE_URL = "http://localhost:3000"
-METABASE_SECRET_KEY = "16f7986cf140c814fd6a9b576dd5f79d42e40a6b38fb398b08889142e0cff43e"
-
+@cache(expire=3000)
 @app.get("/graphique", response_class=HTMLResponse)
 async def root(request: Request, conn=Depends(get_connection)):
-    payload = {
-        "resource": {"dashboard": 3},
-        "params": {},
-        "exp": round(time.time()) + (60 * 10) # 10 minute expiration
-    }
-    token = jwt.encode(payload, METABASE_SECRET_KEY, algorithm="HS256")
-    iframeUrl = METABASE_SITE_URL + "/embed/dashboard/" + token + "#theme=night&bordered=true&titled=true"
-    return templates.TemplateResponse("home/graph.html", {"request": request, "iframeUrl": iframeUrl})
-
+    return templates.TemplateResponse("home/graph.html", {"request": request})
 
 
 # def lat_lng_to_mercator(lat, lng):
