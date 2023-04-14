@@ -302,7 +302,7 @@ async def add_category(request: Request, db: Session = Depends(get_db), response
 
 
 @app.get("/translation", response_class=HTMLResponse)
-async def get_translations(request: Request, current_user: models.User = Depends(get_current_user), conn=Depends(get_connection)):
+async def get_translations(request: Request, conn=Depends(get_connection)):
     query = "SELECT * FROM product_category_name_translation ORDER BY id DESC;"
 
     cats = await conn.fetch(query)
