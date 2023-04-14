@@ -308,17 +308,12 @@ async def get_translations(request: Request, conn=Depends(get_connection)):
     cats = await conn.fetch(query)
     return templates.TemplateResponse("translation/translation.html", {"request": request, "rows": cats})
 
-from fastapi_cache import FastAPICache
-from fastapi_cache.backends.redis import RedisBackend
-from fastapi_cache.decorator import cache
-
 import jwt
 import time
 
 METABASE_SITE_URL = "http://localhost:3000"
 METABASE_SECRET_KEY = "16f7986cf140c814fd6a9b576dd5f79d42e40a6b38fb398b08889142e0cff43e"
 
-@cache(expire=3000)
 @app.get("/graphique", response_class=HTMLResponse)
 async def root(request: Request, conn=Depends(get_connection)):
     payload = {
