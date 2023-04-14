@@ -201,15 +201,11 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Identifiants invalides")
     return user
 
-
-
 @app.get("/", response_class=HTMLResponse)
 async def root(request: Request, conn=Depends(get_connection)):
     query = "SELECT * FROM olist_customers LIMIT 15;"
     rows = await conn.fetch(query)
     return templates.TemplateResponse("home/index.html", {"request": request, "rows": rows})
-
-
 
 # Route d'enregistrement
 
@@ -317,6 +313,9 @@ from fastapi_cache.decorator import cache
 async def root(request: Request, conn=Depends(get_connection)):
     return templates.TemplateResponse("home/graph.html", {"request": request})
 
+@app.get("/model", response_class=HTMLResponse)
+async def root(request: Request, conn=Depends(get_connection)):
+    return templates.TemplateResponse("home/modele.html", {"request": request})
 
 # def lat_lng_to_mercator(lat, lng):
 #     in_proj = Proj(proj='latlong', datum='WGS84')

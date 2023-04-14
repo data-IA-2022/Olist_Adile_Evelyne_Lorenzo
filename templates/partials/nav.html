@@ -58,11 +58,10 @@
 
 
             
-                <a href="#" 
-                   class="rounded-md px-3 py-2 text-sm font-medium"
-                   :class="{ 'bg-gray-900 text-white': active === 'contact', 'text-gray-300 hover:bg-gray-700 hover:text-white': active !== 'contact' }"
-                   @click="active = 'contact'"
-                   x-bind:aria-current="active === 'contact' ? 'page' : undefined">Contact</a>
+                        <button @click="active = 'modele'; localStorage.setItem('activePage', 'modele'); window.location.href = '/model';" 
+                        class="block rounded-md px-3 py-2 text-sm font-medium"
+                        :class="{ 'bg-gray-900 text-white': active === 'modele', 'text-gray-300 hover:bg-gray-700 hover:text-white': active !== 'modele' }"
+                        x-bind:aria-current="active === 'modele' ? 'page' : undefined">Modèle</button>
             </div>
             
           </div>
