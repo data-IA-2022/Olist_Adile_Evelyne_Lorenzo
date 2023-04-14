@@ -30,7 +30,7 @@ from olist_order_items
 group by order_id;
 
 CREATE VIEW orders_customers_items as
-SELECT A.order_id, customer_id, order_purchase_timestamp, customer_zip_code_prefix, customer_city, customer_state, region, total_items_sold, total_price FROM orders_customers A LEFT JOIN olist_order_items_groupby_order B
+SELECT A.order_id, customer_id, customer_unique_id, order_purchase_timestamp, customer_zip_code_prefix, customer_city, customer_state, region, total_items_sold, total_price FROM orders_customers A LEFT JOIN olist_order_items_groupby_order B
 using (order_id);
 
 CREATE VIEW new_customers_month as
@@ -46,11 +46,21 @@ group by purchase_month, customer_state, customer_unique_id
 having count(customer_unique_id) > 1;
 
 CREATE VIEW customer_total_price as
-SELECT customer_id, 0.03*sum(total_price) as margin FROM orders_customers_items
-group by customer_id;
+SELECT customer_unique_id, 0.03*sum(total_price) as margin FROM orders_customers_items
+group by customer_unique_id;
 SELECT avg(margin)
 FROM customer_total_price;
 
-        avg        
--------------------
- 4.132622291365842
+
+
+# RFM
+
+CREATE VIEW lastpurchase_frequency_monetary as
+SELECT customer_unique_id, max(order_purchase_timestamp) as last_purchase, count(order_id) as frequency, sum(total_price) as monetary_value FROM orders_customers_items
+group by customer_unique_id;
+
+CREATE VIEW recency_frequency_monetary as
+SELECT customer_unique_id, DATE_PART('day', '2019-01-01 00:00:00'::timestamp - last_purchase::timestamp) as recency, frequency, monetary_value FROM lastpurchase_frequency_monetary;
+
+COPY (SELECT * FROM recency_frequency_monetary) TO '/tmp/recency_frequency_monetary.csv' DELIMITER ',' CSV HEADER;
+
