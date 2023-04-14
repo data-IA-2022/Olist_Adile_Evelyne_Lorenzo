@@ -308,6 +308,14 @@ async def get_translations(request: Request, conn=Depends(get_connection)):
     cats = await conn.fetch(query)
     return templates.TemplateResponse("translation/translation.html", {"request": request, "rows": cats})
 
+from fastapi_cache import FastAPICache
+from fastapi_cache.backends.redis import RedisBackend
+from fastapi_cache.decorator import cache
+
+@cache(expire=3000)
+@app.get("/graphique", response_class=HTMLResponse)
+async def root(request: Request, conn=Depends(get_connection)):
+    return templates.TemplateResponse("home/graph.html", {"request": request})
 
 
 # def lat_lng_to_mercator(lat, lng):

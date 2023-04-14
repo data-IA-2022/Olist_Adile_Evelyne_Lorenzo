@@ -51,11 +51,12 @@
                         x-bind:aria-current="active === 'translations' ? 'page' : undefined">Traduction</button>
             
             
-                <a href="#" 
-                   class="rounded-md px-3 py-2 text-sm font-medium"
-                   :class="{ 'bg-gray-900 text-white': active === 'graphs', 'text-gray-300 hover:bg-gray-700 hover:text-white': active !== 'graphs' }"
-                   @click="active = 'graphs'"
-                   x-bind:aria-current="active === 'graphs' ? 'page' : undefined">Graphiques</a>
+                        <button @click="active = 'graphique'; localStorage.setItem('activePage', 'graphique'); window.location.href = '/graphique';" 
+                        class="block rounded-md px-3 py-2 text-sm font-medium"
+                        :class="{ 'bg-gray-900 text-white': active === 'graphique', 'text-gray-300 hover:bg-gray-700 hover:text-white': active !== 'graphique' }"
+                        x-bind:aria-current="active === 'graphique' ? 'page' : undefined">Graphique</button>
+
+
             
                 <a href="#" 
                    class="rounded-md px-3 py-2 text-sm font-medium"
