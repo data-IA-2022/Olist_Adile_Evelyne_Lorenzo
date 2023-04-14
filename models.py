@@ -34,9 +34,9 @@ class ProductCategory(Base):
 # Modèle de la table des utilisateurs
 
 
-class User(Base):
+class Users(Base):
     __tablename__ = "users2"
 
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True, index=True)
-    password_hash = Column(String)
+    password_hash = Column(String, nullable=False)

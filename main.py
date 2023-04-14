@@ -1,61 +1,37 @@
-
-
-import jwt
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from fastapi import HTTPException, status, Depends, APIRouter, Request, Form
-from fastapi import Depends, HTTPException
-from fastapi.security import OAuth2PasswordBearer
-from passlib.context import CryptContext
+from fastapi import FastAPI, Depends, HTTPException, status, Request, Form, Response
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
-
-from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from typing import Annotated
-from typing import Optional
-from pydantic import BaseModel
 
+from starlette.middleware.sessions import SessionMiddleware
 
 from sshtunnel import SSHTunnelForwarder
+
 from googletrans import Translator
 
 from sqlalchemy.orm import Session
-from database import get_db
-from fastapi import FastAPI, Depends, HTTPException, status, Request, Form, Body
 
-from database import get_db, SessionLocal, engine
-import bcrypt
+from database import engine, get_db
 import models
+
 import asyncpg
 
 import yaml
 
-from datetime import datetime, timedelta
-from fastapi import Cookie
+
+from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
+
+from pydantic import BaseModel
+from typing import Optional
+
+from sqlalchemy.orm import Session
+
+from passlib.context import CryptContext
+from jose import jwt, JWTError
 
 import models
-import schemas
 
+from datetime import datetime, timedelta
 
-class User(BaseModel):
-    username: str
-    password: str
-
-    class Config:
-        orm_mode = True
-
-
-class Token(BaseModel):
-    access_token: str
-    token_type: str
-
-
-class TokenData(BaseModel):
-    username: Optional[str] = None
-
-
-SECRET_KEY = "3369272D83B2A6EFC59562D221B3F"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 # from bokeh.plotting import figure, show
 # from bokeh.tile_providers import get_provider, WIKIMEDIA, CARTODBPOSITRON, STAMEN_TERRAIN, STAMEN_TONER, ESRI_IMAGERY, OSM
@@ -65,6 +41,20 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 # from pyproj import Proj, transform
 # from bokeh.models.ranges import Range1d
 # from bokeh.models.tiles import WMTSTileSource
+SECRET_KEY = "KlgH6AzYDeZeGwD288to79I3vTHT8wp7"
+ALGORITHM = "HS256"
+
+
+class CreateUser(BaseModel):
+    username: str
+    password: str
+
+
+bcrypt_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+models.Base.metadata.create_all(bind=engine)
+
+oauth2_bearer = OAuth2PasswordBearer(tokenUrl="token")
 
 
 def load_config(file_path):
@@ -73,17 +63,17 @@ def load_config(file_path):
     return config
 
 
-def create_ssh_tunnel(config):
-    ssh_tunnel = SSHTunnelForwarder(
-        (config["ssh"]["host"], 22),
-        ssh_username=config["ssh"]["username"],
-        ssh_password=config["ssh"]["password"],
-        local_bind_address=(
-            config["ssh"]["local_bind_address"], config["ssh"]["local_bind_port"]),
-        remote_bind_address=(
-            config["ssh"]["remote_bind_address"], config["ssh"]["remote_bind_port"]),
-    )
-    return ssh_tunnel
+# def create_ssh_tunnel(config):
+#     ssh_tunnel = SSHTunnelForwarder(
+#         (config["ssh"]["host"], 22),
+#         ssh_username=config["ssh"]["username"],
+#         ssh_password=config["ssh"]["password"],
+#         local_bind_address=(
+#             config["ssh"]["local_bind_address"], config["ssh"]["local_bind_port"]),
+#         remote_bind_address=(
+#             config["ssh"]["remote_bind_address"], config["ssh"]["remote_bind_port"]),
+#     )
+#     return ssh_tunnel
 
 # Ajoutez cette fonction pour traduire le texte en français
 
@@ -109,12 +99,40 @@ def translate_to_pt_and_en(text: str) -> tuple:
 
 app = FastAPI()
 
+
+# async def get_current_user(request: Request, token: str = Depends(oauth2_bearer), db: Session = Depends(get_db)):
+#     try:
+#         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+#         username: str = payload.get("sub")
+#         user_id: int = payload.get("id")
+#         if username is None or user_id is None:
+#             raise get_user_exception()
+#         return {"username": username, "id": user_id, "user_authenticated": True}
+#     except JWTError:
+#         raise get_user_exception()
+
+async def get_current_user(request: Request, token: str = Depends(oauth2_bearer), db: Session = Depends(get_db)):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        user_id: int = payload.get("id")
+        if username is None or user_id is None:
+            return None
+        return {"username": username, "id": user_id, "user_authenticated": True}
+    except JWTError:
+        return None
+
+
+app.add_middleware(
+    SessionMiddleware, secret_key="288to79I3vTHT8wp7KlgH6AzYDeZeGwD", max_age=86400
+)
+
 # Configurer Jinja2
 templates = Jinja2Templates(directory="templates")
 
 config = load_config("config.yml")
-ssh_tunnel = create_ssh_tunnel(config)
-ssh_tunnel.start()
+# ssh_tunnel = create_ssh_tunnel(config)
+# ssh_tunnel.start()
 
 
 async def update_translations(conn):
@@ -156,7 +174,7 @@ async def connect_to_db():
 async def startup_event():
     global ssh_tunnel, conn
     print("Démarrage du tunnel SSH...")
-    ssh_tunnel.start()
+    # ssh_tunnel.start()
     print("Création d'une connexion unique à la base de données...")
     conn = await connect_to_db()
 
@@ -194,127 +212,9 @@ async def update_geolocation(conn):
             f"Erreur lors de la mise à jour des coordonnées de géopoint : {e}")
 
 
-@app.get("/register")
-async def register_form(request: Request):
-    return templates.TemplateResponse("auth/register.html", {"request": request})
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-
-def get_password_hash(password):
-    return pwd_context.hash(password)
-
-
-@app.post("/register", response_model=None)
-async def register_user(username: str = Form(...), password: str = Form(...), db=Depends(get_db)):
-    # Check if the user already exists
-    if db.query(models.User).filter_by(username=username).first():
-        raise HTTPException(
-            status_code=400, detail="L'utilisateur existe déjà")
-
-    # Hash the password
-    password_hash = get_password_hash(password)
-
-    # Add the user to the database
-    new_user = models.User(username=username, password_hash=password_hash)
-    db.add(new_user)
-    db.commit()
-
-    return {"message": "L'utilisateur a été enregistré avec succès"}
-
-
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
-
-
-def get_user(username: str, db=Depends(get_db)):
-    return db.query(models.User).filter(models.User.username == username).first()
-
-
-def authenticate_user(db, username: str, password: str):
-    user = get_user(username, db)
-    if not user:
-        return None
-    password_hash = user.password_hash
-    if not bcrypt.checkpw(password.encode("utf-8"), password_hash.encode("utf-8")):
-        return None
-    return user
-
-
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
-    to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.utcnow() + expires_delta
-    else:
-        expire = datetime.utcnow() + timedelta(minutes=15)
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
-
-
-@app.post("/token", response_model=Token)
-async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db=Depends(get_db)):
-    user = authenticate_user(db, form_data.username, form_data.password)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid username or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        data={"sub": user.username}, expires_delta=access_token_expires
-    )
-    return {"access_token": access_token, "token_type": "bearer"}
-
-
-@app.get("/login")
-async def login_form(request: Request):
-    return templates.TemplateResponse("auth/login.html", {"request": request})
-
-
-@app.post("/login")
-async def login(request: Request, username: str = Form(...), password: str = Form(...), db=Depends(get_db)):
-    user = authenticate_user(db, username, password)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid username or password",
-        )
-
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        data={"sub": user.username}, expires_delta=access_token_expires
-    )
-
-    response = JSONResponse(content={"message": "Login successful"})
-    response.set_cookie(
-        key="access_token",
-        value=f"Bearer {access_token}",
-        httponly=True,
-        max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-        expires=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-    )
-    return response
-
-
-async def get_current_user(token: str = Depends(oauth2_scheme), db=Depends(get_db)):
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str = payload.get("sub")
-        if username is None:
-            raise credentials_exception
-        user = get_user(username, db)
-    except jwt.JWTError:
-        raise credentials_exception
-
-    if user is None:
-        raise credentials_exception
-
-    return user
-
-
 @app.get("/", response_class=HTMLResponse)
-async def root(request: Request, conn=Depends(get_connection), token: str = Depends(oauth2_scheme)):
+async def root(request: Request, conn=Depends(get_connection)):
+
     query = "SELECT * FROM olist_customers LIMIT 15;"
     rows = await conn.fetch(query)
     return templates.TemplateResponse("home/index.html", {"request": request, "rows": rows})
@@ -429,7 +329,152 @@ async def add_category(request: Request, db: Session = Depends(get_db), response
 
 @app.get("/translation", response_class=HTMLResponse)
 async def get_translations(request: Request, conn=Depends(get_connection)):
+
     query = "SELECT * FROM product_category_name_translation ORDER BY id DESC;"
 
     cats = await conn.fetch(query)
     return templates.TemplateResponse("translation/translation.html", {"request": request, "rows": cats})
+
+
+'''
+#################################################################################################################################################################
+#################################################   A U T H E N T I F I C A T I O N  ############################################################################
+#################################################################################################################################################################
+'''
+
+
+bcrypt_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+
+def get_password_hash(password):
+    return bcrypt_context.hash(password)
+
+
+def verify_password(plain_password, hashed_password):
+    return bcrypt_context.verify(plain_password, hashed_password)
+
+
+def authenticate_user(username: str, password: str, db):
+    user = db.query(models.Users)\
+        .filter(models.Users.username == username)\
+        .first()
+
+    if not user:
+        return False
+    if not verify_password(password, user.password_hash):
+        return False
+    return user
+
+
+def create_access_token(username: str, user_id: int,
+                        expires_delta: Optional[timedelta] = None):
+
+    encode = {"sub": username, "id": user_id}
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=15)
+    encode.update({"exp": expire})
+    return jwt.encode(encode, SECRET_KEY, algorithm=ALGORITHM)
+
+
+@app.get("/create/user", response_class=HTMLResponse)
+async def create_user_form(request: Request):
+    return templates.TemplateResponse("auth/register.html", {"request": request})
+
+
+@app.post("/create/user", response_class=HTMLResponse)
+async def create_new_user(request: Request, username: str = Form(...), password: str = Form(...), db=Depends(get_db)):
+    create_user_model = models.Users()
+    create_user_model.username = username
+    hash_password = get_password_hash(password)
+    create_user_model.password_hash = hash_password
+    create_user_model.is_active = True
+
+    db.add(create_user_model)
+    db.commit()
+
+    return """
+    <html>
+        <body>
+            <h1>User {username} created successfully!</h1>
+            <a href="/">Go back to home</a>
+        </body>
+    </html>
+    """.format(username=username)
+
+
+@app.post("/token")
+async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(),
+                                 db=Depends(get_db)):
+    user = authenticate_user(form_data.username, form_data.password, db)
+    if not user:
+        raise token_exception()
+    token_expires = timedelta(minutes=20)
+    token = create_access_token(user.username,
+                                user.id,
+                                expires_delta=token_expires)
+    return {"token": token}
+
+
+# Exceptions
+def get_user_exception():
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    return credentials_exception
+
+
+def token_exception():
+    token_exception_response = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Incorrect username or password",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    return token_exception_response
+
+
+@app.get("/login", response_class=HTMLResponse)
+async def login_form(request: Request):
+    return templates.TemplateResponse("auth/login.html", {"request": request})
+
+
+@app.post("/login")
+async def login(request: Request, username: str = Form(...), password: str = Form(...), db=Depends(get_db), response: Response = None):
+    print(f"Username: {username}, Password: {password}")
+
+    user = authenticate_user(username, password, db)
+    if not user:
+        return templates.TemplateResponse("auth/login.html", {"request": request, "error": "Incorrect username or password"})
+
+    # The user will remain logged in for 7 days
+    token_expires = timedelta(days=7)
+    token = create_access_token(
+        user.username, user.id, expires_delta=token_expires)
+
+    # Set the user_authenticated session value
+    request.session["user_authenticated"] = True
+
+    response = RedirectResponse(url="/", status_code=303)
+    response.set_cookie(key="access_token", value=token,
+                        httponly=True, max_age=token_expires.total_seconds())
+    return response
+
+
+# @app.post("/login")
+# async def login(request: Request, username: str = Form(...), password: str = Form(...), db=Depends(get_db), response: Response = None):
+#     user = authenticate_user(username, password, db)
+#     if not user:
+#         return templates.TemplateResponse("auth/login.html", {"request": request, "error": "Incorrect username or password"})
+
+#     # The user will remain logged in for 7 days
+#     token_expires = timedelta(days=7)
+#     token = create_access_token(
+#         user.username, user.id, expires_delta=token_expires)
+
+#     response = RedirectResponse(url="/", status_code=303)
+#     response.set_cookie(key="access_token", value=token,
+#                         httponly=True, max_age=token_expires.total_seconds())
+#     return response
